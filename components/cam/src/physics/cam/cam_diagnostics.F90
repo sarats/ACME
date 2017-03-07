@@ -725,6 +725,7 @@ subroutine diag_init()
   call add_hist_coord('crm_nx'       ,crm_nx,  'CRM NX')
   call add_hist_coord('crm_ny'       ,crm_ny,  'CRM NY')
   call add_hist_coord('crm_nz'       ,crm_nz,  'CRM NZ')
+  call add_hist_coord('crm_z1'      ,crm_nz+1, 'CRM_Z1')!Guangxing Lin
   call add_hist_coord('pverp'        ,pverp,     'pverp ')
   call add_hist_coord('pver'         ,pver,      'pver  ')
 #ifdef ECPP

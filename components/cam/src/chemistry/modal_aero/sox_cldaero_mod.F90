@@ -184,7 +184,7 @@ contains
 !----------------------------------------------------------------------------------
   subroutine sox_cldaero_update( &
        ncol, lchnk, loffset, dtime, mbar, pdel, press, tfld, cldnum, cldfrc, cfact, xlwc, &
-       delso4_hprxn, xh2so4, xso4, xso4_init, nh3g, hno3g, xnh3, xhno3, xnh4c,  xno3c, xmsa, xso2, xh2o2, qcw, qin )
+       delso4_hprxn, xh2so4, xso4, xso4_init, nh3g, hno3g, xnh3, xhno3, xnh4c,  xno3c, xmsa, xso2, xh2o2, qcw, qin, aqso4_h2o2, aqso4_o3 )
 
     ! args 
 
@@ -221,6 +221,9 @@ contains
     real(r8), intent(inout) :: qcw(:,:,:) ! cloud-borne aerosol (vmr)
     real(r8), intent(inout) :: qin(:,:,:) ! xported species ( vmr )
 
+    real(r8), optional,intent(out) :: aqso4_h2o2(:,:)                ! SO4 aqueous phase chemistry due to H2O2 (kg/m2)
+    real(r8), optional,intent(out) :: aqso4_o3(:,:)                  ! SO4 aqueous phase chemistry due to O3 (kg/m2)
+
     ! local vars ...
 
     real(r8) :: dqdt_aqso4(ncol,pver,gas_pcnst), &
@@ -244,6 +247,11 @@ contains
 
     integer :: i,k
     real(r8) :: xl
+
+    logical :: use_SPCAM, use_ECPP
+
+    call phys_getopts (use_SPCAM_out = use_SPCAM)
+    call phys_getopts (use_ECPP_out  = use_ECPP)
 
     ! make sure dqdt is zero initially, for budgets
     dqdt_aqso4(:,:,:) = 0.0_r8
@@ -481,8 +489,10 @@ contains
                      *pdel(i,k)/gravit ! kg/m2/s
              enddo
           enddo
-      !    call outfld( trim(cnst_name_cw(m))//'AQSO4', sflx(1:ncol), ncol, lchnk) !Guangxing Lin added 1
-
+          if(.not.use_SPCAM) then
+          call outfld( trim(cnst_name_cw(m))//'AQSO4', sflx(1:ncol), ncol, lchnk) !Guangxing Lin added 1
+          end if     
+     
           sflx(:)=0._r8
           do k=1,pver
              do i=1,ncol
@@ -490,27 +500,48 @@ contains
                      *pdel(i,k)/gravit ! kg/m2/s
              enddo
           enddo
-     !     call outfld( trim(cnst_name_cw(m))//'AQH2SO4', sflx(1:ncol), ncol, lchnk)!Guangxing Lin added 1
-       endif
+          if(.not.use_SPCAM) then
+          call outfld( trim(cnst_name_cw(m))//'AQH2SO4', sflx(1:ncol), ncol, lchnk)!Guangxing Lin added 1
+          endif
+
+        endif
     end do
+
+    if(use_SPCAM .and. use_ECPP) then
+           aqso4_h2o2(:,:) = 0._r8
+           aqso4_o3(:,:) = 0.0_r8
+    end if
 
     sflx(:)=0._r8
     do k=1,pver
        do i=1,ncol
           sflx(i)=sflx(i)+dqdt_aqhprxn(i,k)*specmw_so4_amode/mbar(i,k) &
                *pdel(i,k)/gravit ! kg SO4 /m2/s
+          if(use_SPCAM .and. use_ECPP) then
+          aqso4_h2o2(i,k)=dqdt_aqhprxn(i,k)*specmw_so4_amode/mbar(i,k) &
+                  *pdel(i,k)/gravit*dtime ! kg SO4 /m2
+          endif
+
        enddo
     enddo
-    !call outfld( 'AQSO4_H2O2', sflx(1:ncol), ncol, lchnk) !Guangxing Lin added 1
-    sflx(:)=0._r8
+          if(.not.use_SPCAM) then
+    call outfld( 'AQSO4_H2O2', sflx(1:ncol), ncol, lchnk) !Guangxing Lin added 1
+          end if
+
+     sflx(:)=0._r8
     do k=1,pver
        do i=1,ncol
           sflx(i)=sflx(i)+dqdt_aqo3rxn(i,k)*specmw_so4_amode/mbar(i,k) &
                *pdel(i,k)/gravit ! kg SO4 /m2/s
+          if(use_SPCAM .and. use_ECPP) then
+          aqso4_o3(i,k)=dqdt_aqo3rxn(i,k)*specmw_so4_amode/mbar(i,k) &
+                  *pdel(i,k)/gravit*dtime ! kg SO4 /m2
+          endif
        enddo
     enddo
-   ! call outfld( 'AQSO4_O3', sflx(1:ncol), ncol, lchnk) !Guangxing Lin added 1
-
+          if(.not.use_SPCAM) then
+    call outfld( 'AQSO4_O3', sflx(1:ncol), ncol, lchnk) !Guangxing Lin added 1
+          endif
   end subroutine sox_cldaero_update
 
   !----------------------------------------------------------------------------------

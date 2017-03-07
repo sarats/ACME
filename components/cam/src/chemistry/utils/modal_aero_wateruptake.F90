@@ -409,7 +409,9 @@ subroutine modal_aero_wateruptake_dr(state, pbuf, list_idx_in, dgnumdry_m, dgnum
                    rh_crm(i, ii, jj, k) = h2ommr_crm(i,ii,jj,mm)/qs_crm_tmp
                    rh_crm(i, ii, jj, k) = max(rh_crm(i, ii, jj, k), 0.0_r8)
                    rh_crm(i, ii, jj, k) = min(rh_crm(i, ii, jj, k), 0.98_r8)
-                   if(cldn_crm(i, ii, jj, mm).gt.0.98_r8) then
+                   !if(cldn_crm(i, ii, jj, mm).gt.0.98_r8) then
+                   if(cldn_crm(i, ii, jj, mm).gt.0.5_r8) then  ! change this to 0.5. In the case with CLUBB_CRM, 
+                                                               ! cldn_crm can be less than 0.98 +++mhwang  July 2013
                      ! aerosol water uptake is not calculaed at overcast sky in MMF. +++mhwang
                      rh_crm(i, ii, jj, k) = 0.0_r8
                    end if

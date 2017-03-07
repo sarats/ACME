@@ -338,10 +338,40 @@ subroutine crm_physics_init()
      call addfld ('UPWP    ',    (/'crm_nx','crm_ny','crm_z1'/), 'A', 'm^2/s^2',    'u prime * w prime from clubb')
      call addfld ('VPWP    ',    (/'crm_nx','crm_ny','crm_z1'/), 'A', 'm^2/s^2',    'v prime * w prime from clubb')
      call addfld ('CRM_CLD ',    (/'crm_nx','crm_ny','crm_z1'/), 'A', 'fraction',   'cloud fraction from clubb')
+     call addfld ('T_TNDCY ',    (/'crm_nx','crm_ny','crm_z1'/), 'A',  'K/s',   't tendency from clubb')
+     call addfld ('QV_TNDCY ',   (/'crm_nx','crm_ny','crm_z1'/), 'A','kg/kg/s',   'water vapor tendency from clubb')
+     call addfld ('QC_TNDCY ',   (/'crm_nx','crm_ny','crm_z1'/), 'A','kg/kg/s',   'liquid condensate tendency from clubb')
+     call addfld ('CLUBB_TK ',   (/'crm_nx','crm_ny','crm_nz'/), 'A','m^2/s',   'Eddy viscosity from clubb')
+     call addfld ('CLUBB_TKH ',   (/'crm_nx','crm_ny','crm_nz'/), 'A','m^2/s',   'Eddy viscosity from clubb')
+     call addfld ('RELVAR ',   (/'crm_nx','crm_ny','crm_nz'/), 'A',' ',   'cloud water relative variance from clubb')
+     call addfld ('ACCRE_ENHAN ',   (/'crm_nx','crm_ny','crm_nz'/), 'A',' ',   'Accretion enhancment from clubb')
+     call addfld ('QCLVAR ',   (/'crm_nx','crm_ny','crm_nz'/), 'A','(kg/kg)^2',   'cloud water variance from clubb')
+! add GCM-scale output
+     call addfld ('SPUP2',    (/ 'lev' /), 'A', 'm^2/s^2',   'u prime ^2 from clubb on GCM grids' )
+     call addfld ('SPVP2',    (/ 'lev' /), 'A', 'm^2/s^2',   'v prime ^2 from clubb on GCM grids' )
+     call addfld ('SPWPRTP',    (/ 'lev' /), 'A', 'mkg/skg',   'w prime * rt prime from clubb on GCM grids' )
+     call addfld ('SPWPTHLP',    (/ 'lev' /), 'A', 'mK/s',   'w prime * th_l prime from clubb on GCM grids' )
+     call addfld ('SPWP2',    (/ 'lev' /), 'A', 'm^2/s^2',   'w prime ^2 from clubb on GCM grids' )
+     call addfld ('SPWP3',    (/ 'lev' /), 'A', 'm^3/s^3',   'w prime ^3 from clubb on GCM grids' )
+     call addfld ('SPRTP2',    (/ 'lev' /), 'A', '(kg/kg)2',   'r_t prime ^2  from clubb on GCM grids' )
+     call addfld ('SPTHLP2',    (/ 'lev' /), 'A', 'K^2',   'th_l_prime ^2  from clubb on GCM grids' )
+     call addfld ('SPRTPTHLP',   (/ 'lev' /), 'A', 'kgK/kg',   ' r_t prime * th_l prime  from clubb on GCM grids' )
+     call addfld ('SPUPWP',   (/ 'lev' /), 'A', 'm^2/s^2',   ' u prime * w prime  from clubb on GCM grids' )
+     call addfld ('SPVPWP',   (/ 'lev' /), 'A', 'm^2/s^2',   ' v prime * w prime  from clubb on GCM grids' )
+     call addfld ('SPCRM_CLD',   (/ 'lev' /), 'A', 'fraction',   ' cloud fraction  from clubb on GCM grids' )
+     call addfld ('SPT_TNDCY',   (/ 'lev' /), 'A', 'K/s',   ' t tendency  from clubb on GCM grids' )
+     call addfld ('SPQV_TNDCY',   (/ 'lev' /), 'A', 'kg/kg/s',   'water vapor tendency  from clubb on GCM grids' )
+     call addfld ('SPQC_TNDCY',   (/ 'lev' /), 'A', 'kg/kg/s',   'liquid condensate tendency  from clubb on GCM grids' )
+     call addfld ('SPCLUBB_TK',   (/ 'lev' /), 'A', 'm^2/s',   'Eddy viscosity from clubb on GCM grids' )
+     call addfld ('SPCLUBB_TKH',   (/ 'lev' /), 'A', 'm^2/s',   'Eddy viscosity from clubb on GCM grids' )
+     call addfld ('SPRELVAR',   (/ 'lev' /), 'A', ' ',   'cloud water relative variance from clubb on GCM grids' )
+     call addfld ('SPACCRE_ENHAN',   (/ 'lev' /), 'A', ' ',   'Accretion enhancment from clubb on GCM grids' )
+     call addfld ('SPQCLVAR',   (/ 'lev' /), 'A', '(kg/kg)^2 ',   'cloud water variance from clubb on GCM grids' )
 #endif
 !==Guangxing Lin New CRM
       call addfld ('CRM_TK', (/'crm_nx','crm_ny','crm_nz'/), 'A','m^2/s',   'Eddy viscosity from CRM')
   call addfld ('CRM_TKH',  (/'crm_nx','crm_ny','crm_nz'/), 'A','m^2/s',   'Eddy viscosity from CRM')
+     call addfld ('SPCLD3D',   (/ 'lev' /), 'A', 'fraction',   'cloud fraction on GCM grids' )
 !==Guangxing Lin New CRM
 #ifdef ECPP
   if (use_ECPP) then
@@ -423,6 +453,16 @@ subroutine crm_physics_init()
     call add_default ('SPNDROPSRC', 1, ' ')
     call add_default ('SPNDROPMIX', 1, ' ')
     call add_default ('SPNDROPCOL', 1, ' ')
+
+    call addfld ('SPCLDTOT',horiz_only, 'A','fraction','Vertically-integrated total cloud from CRM'   )  
+    call addfld ('SPCLDLOW',horiz_only, 'A','fraction','Vertically-integrated low cloud from CRM'   )  
+    call addfld ('SPCLDMED',horiz_only, 'A','fraction','Vertically-integrated mid-level cloud from CRM'   )  
+    call addfld ('SPCLDHGH',horiz_only, 'A','fraction','Vertically-integrated high cloud from CRM'   )  
+  call add_default ('SPCLDTOT', 1, ' ')
+  call add_default ('SPCLDLOW', 1, ' ')
+  call add_default ('SPCLDMED', 1, ' ')
+  call add_default ('SPCLDHGH', 1, ' ')
+
 
 #ifdef MODAL_AERO
 ! add dropmixnuc tendencies for all modal aerosol species
@@ -560,6 +600,10 @@ end subroutine crm_physics_init
 !==Guangxing Lin
    !!!use aerosol_intr,    only: aerosol_wet_intr
 
+#ifdef CLUBB_CRM
+   use cloud_cover_diags, only: cloud_cover_diags_out
+   use pkg_cldoptics, only: cldovrlap
+#endif
 
    real(r8), intent(in) :: ztodt                          ! 2 delta t (model time increment)
    type(physics_state), intent(inout) :: state   !  state should be intent(in), but it is changed in this subroutine,
@@ -810,6 +854,32 @@ end subroutine crm_physics_init
    real(r8)             :: dgnumwet_rad(pcols, crm_nx, crm_ny, crm_nz, ntot_amode) ! wet mode dimaeter
 #endif
 
+#ifdef CLUBB_CRM
+   integer,  pointer :: nmxrgn(:)      ! Number of maximally overlapped regions
+   real(r8), pointer :: pmxrgn(:,:)    ! Maximum values of pressure for each
+   real(r8) :: spup2(pcols, pver)
+   real(r8) :: spvp2(pcols, pver)
+   real(r8) :: spwprtp(pcols, pver)
+   real(r8) :: spwpthlp(pcols, pver)
+   real(r8) :: spwp2(pcols, pver)
+   real(r8) :: spwp3(pcols, pver)
+   real(r8) :: sprtp2(pcols, pver)
+   real(r8) :: spthlp2(pcols, pver)
+   real(r8) :: sprtpthlp(pcols, pver)
+   real(r8) :: spupwp(pcols, pver)
+   real(r8) :: spvpwp(pcols, pver)
+   real(r8) :: spcrm_cld(pcols, pver)
+   real(r8) :: spt_tndcy(pcols, pver)
+   real(r8) :: spqv_tndcy(pcols, pver)
+   real(r8) :: spqc_tndcy(pcols, pver)
+   real(r8) :: spclubb_tk(pcols, pver)
+   real(r8) :: spclubb_tkh(pcols, pver)
+   real(r8) :: sprelvar(pcols, pver)
+   real(r8) :: spaccre_enhan(pcols, pver)
+   real(r8) :: spqclvar(pcols, pver)
+#endif
+   real(r8) :: spcld3d (pcols, pver)
+
 ! Surface fluxes +++mhwang
    real(r8) ::  fluxu0           ! surface momenment fluxes
    real(r8) ::  fluxv0           ! surface momenment fluxes
@@ -867,6 +937,7 @@ end subroutine crm_physics_init
    !!!call physics_ptend_init(ptend)                ! Initialize output physics_ptend object
    lu = .true. 
    lv = .true.
+
    ls = .true.
    lq(:) = .true.
    fromcrm = .true.
@@ -881,6 +952,11 @@ end subroutine crm_physics_init
 
    lchnk = state%lchnk
    ncol  = state%ncol
+
+#ifdef CLUBB_CRM
+   allocate(nmxrgn(pcols))
+   allocate(pmxrgn(pcols,pverp))
+#endif
 
    if (SPCAM_microp_scheme .eq. 'm2005') then
      call pbuf_get_field(pbuf, crm_nc_rad_idx, nc_rad, start=(/1,1,1,1/), kount=(/pcols,crm_nx, crm_ny, crm_nz/))
@@ -1586,6 +1662,9 @@ end subroutine crm_physics_init
        call outfld('UPWP    ', clubb_buffer(:, :, :, :, 10)  ,pcols   ,lchnk   )
        call outfld('VPWP    ', clubb_buffer(:, :, :, :, 11)  ,pcols   ,lchnk   )
        call outfld('CRM_CLD ', clubb_buffer(:, :, :, :, 12)  ,pcols   ,lchnk   )
+       call outfld('T_TNDCY ', clubb_buffer(:, :, :, :, 13)  ,pcols   ,lchnk   )
+       call outfld('QC_TNDCY', clubb_buffer(:, :, :, :, 14)  ,pcols   ,lchnk   )
+       call outfld('QV_TNDCY', clubb_buffer(:, :, :, :, 15)  ,pcols   ,lchnk   )
 !==Guangxing Lin new crm
        call outfld('CLUBB_TK ', clubb_tk(:, :, :, :)  ,pcols   ,lchnk   )
        call outfld('CLUBB_TKH', clubb_tkh(:, :, :, :)  ,pcols   ,lchnk   )
@@ -1593,9 +1672,81 @@ end subroutine crm_physics_init
        call outfld('ACCRE_ENHAN', accre_enhan(:, :, :, :)  ,pcols   ,lchnk   )
        call outfld('QCLVAR', qclvar(:, :, :, :)  ,pcols   ,lchnk   )
 !==Guangxing Lin new crm
+       
+       spup2 = 0.0; spvp2 = 0.0; spwprtp = 0.0; spwpthlp  = 0.0
+       spwp2 = 0.0; spwp3 = 0.0; sprtp2 = 0.0; spthlp2 = 0.0
+       sprtpthlp = 0.0; spupwp = 0.0 ; spvpwp = 0.0; spcrm_cld = 0.0
+       spt_tndcy = 0.0; spqc_tndcy = 0.0; spqv_tndcy = 0.0
+       spclubb_tk = 0.0; spclubb_tkh = 0.0
+       sprelvar = 0.0; spaccre_enhan  = 0.0; spqclvar = 0.0
+       do i=1, ncol
+        do jj=1, crm_ny
+        do ii=1, crm_nx
+          do m=1, crm_nz+1
+            k = pver-m+1
+            spup2(i,k) = spup2(i,k) + clubb_buffer(i, ii, jj, m, 1)/(crm_nx*crm_ny)
+            spvp2(i,k) = spvp2(i,k) + clubb_buffer(i, ii, jj, m, 2)/(crm_nx*crm_ny)
+            spwprtp(i,k) = spwprtp(i,k) + clubb_buffer(i, ii, jj, m, 3)/(crm_nx*crm_ny)
+            spwpthlp(i,k) = spwpthlp(i,k) + clubb_buffer(i, ii, jj, m, 4)/(crm_nx*crm_ny)
+            spwp2(i,k) = spwp2(i,k) + clubb_buffer(i, ii, jj, m, 5)/(crm_nx*crm_ny)
+            spwp3(i,k) = spwp3(i,k) + clubb_buffer(i, ii, jj, m, 6)/(crm_nx*crm_ny)
+            sprtp2(i,k) = sprtp2(i,k) + clubb_buffer(i, ii, jj, m, 7)/(crm_nx*crm_ny)
+            spthlp2(i,k) = spthlp2(i,k) + clubb_buffer(i, ii, jj, m, 8)/(crm_nx*crm_ny)
+            sprtpthlp(i,k) = sprtpthlp(i,k) + clubb_buffer(i, ii, jj, m, 9)/(crm_nx*crm_ny)
+            spupwp(i,k) = spupwp(i,k) + clubb_buffer(i, ii, jj, m, 10)/(crm_nx*crm_ny)
+            spupwp(i,k) = spupwp(i,k) + clubb_buffer(i, ii, jj, m, 11)/(crm_nx*crm_ny)
+            spcrm_cld(i,k) = spcrm_cld(i,k) + clubb_buffer(i, ii, jj, m, 12)/(crm_nx*crm_ny)
+            spt_tndcy(i,k) = spt_tndcy(i,k) + clubb_buffer(i, ii, jj, m, 13)/(crm_nx*crm_ny)
+            spqc_tndcy(i,k) = spqc_tndcy(i,k) + clubb_buffer(i, ii, jj, m, 14)/(crm_nx*crm_ny)
+            spqv_tndcy(i,k) = spqv_tndcy(i,k) + clubb_buffer(i, ii, jj, m, 15)/(crm_nx*crm_ny)
+          end do
+          do m=1, crm_nz
+            k = pver-m+1
+            spclubb_tk(i,k) = spclubb_tk(i,k) + clubb_tk(i, ii, jj, m)/(crm_nx*crm_ny)
+            spclubb_tkh(i,k) = spclubb_tkh(i,k) + clubb_tkh(i, ii, jj, m)/(crm_nx*crm_ny)
+            sprelvar(i,k) = sprelvar(i,k) + relvar(i, ii, jj, m)/(crm_nx*crm_ny)
+            spaccre_enhan(i,k) = spaccre_enhan(i,k) + accre_enhan(i, ii, jj, m)/(crm_nx*crm_ny)
+            spqclvar(i,k) = spqclvar(i,k) + qclvar(i, ii, jj, m)/(crm_nx*crm_ny)
+          end do
+        end do
+        end do
+       end do
+       call outfld('SPUP2',  spup2  ,pcols   ,lchnk   )
+       call outfld('SPVP2',  spvp2  ,pcols   ,lchnk   )
+       call outfld('SPWPRTP', spwprtp   ,pcols   ,lchnk   )
+       call outfld('SPWPTHLP', spwpthlp   ,pcols   ,lchnk   )
+       call outfld('SPWP2', spwp2   ,pcols   ,lchnk   )
+       call outfld('SPWP3', spwp3   ,pcols   ,lchnk   )
+       call outfld('SPRTP2', sprtp2   ,pcols   ,lchnk   )
+       call outfld('SPTHLP2', spthlp2   ,pcols   ,lchnk   )
+       call outfld('SPRTPTHLP', sprtpthlp   ,pcols   ,lchnk   )
+       call outfld('SPUPWP', spupwp  ,pcols   ,lchnk   )
+       call outfld('SPVPWP', spvpwp  ,pcols   ,lchnk   )
+       call outfld('SPCRM_CLD', spcrm_cld  ,pcols   ,lchnk   )
+       call outfld('SPT_TNDCY', spt_tndcy  ,pcols   ,lchnk   )
+       call outfld('SPQC_TNDCY', spqc_tndcy  ,pcols   ,lchnk   )
+       call outfld('SPQV_TNDCY', spqv_tndcy  ,pcols   ,lchnk   )
+       call outfld('SPCLUBB_TK ', spclubb_tk  ,pcols   ,lchnk   )
+       call outfld('SPCLUBB_TKH', spclubb_tkh  ,pcols   ,lchnk   )
+       call outfld('SPRELVAR', sprelvar, pcols, lchnk  )
+       call outfld('SPACCRE_ENHAN', spaccre_enhan, pcols, lchnk  )
+       call outfld('SPQCLVAR', spqclvar, pcols, lchnk  )
 
 #endif
 
+       spcld3d = 0.0
+       do i=1, ncol
+         do jj=1, crm_ny
+         do ii=1, crm_nx
+           do m=1, crm_nz
+             k = pver-m+1
+             spcld3d(i,k) = spcld3d(i,k) + cld3d_crm(i,ii,jj,m)/(crm_nx*crm_ny)
+           end do
+         end do
+         end do
+       end do
+       call outfld('SPCLD3D', spcld3d, pcols, lchnk)
+       
        ifld = pbuf_get_index('QRL')
        call pbuf_get_field(pbuf, ifld, qrl)
        ifld = pbuf_get_index('QRS')
@@ -1714,6 +1865,25 @@ end subroutine crm_physics_init
        call outfld('ICLDTWP' ,cwp    , pcols,lchnk)
        call outfld('ICLDIWP' ,cicewp , pcols,lchnk)
 
+       call outfld('SPCLDTOT',cltot  ,pcols,lchnk)
+       call outfld('SPCLDHGH',clhgh  ,pcols,lchnk)
+       call outfld('SPCLDMED',clmed  ,pcols,lchnk)
+       call outfld('SPCLDLOW',cllow  ,pcols,lchnk)
+#ifdef CLUBB_CRM
+! Determine parameters for maximum/random overlap
+       call cldovrlap(lchnk, ncol, state%pint, cld, nmxrgn, pmxrgn)
+       call cloud_cover_diags_out(lchnk, ncol, cld, state%pmid, nmxrgn, pmxrgn )
+       deallocate(pmxrgn)
+       deallocate(nmxrgn)
+#else
+       call outfld('CLDTOT  ',cltot  ,pcols,lchnk)
+       call outfld('CLDHGH  ',clhgh  ,pcols,lchnk)
+       call outfld('CLDMED  ',clmed  ,pcols,lchnk)
+       call outfld('CLDLOW  ',cllow  ,pcols,lchnk)
+       call outfld('CLOUD   ',cld,  pcols,lchnk)
+#endif
+      
+       call outfld('CLOUDTOP',cldtop, pcols,lchnk)
        if (use_ECPP) then
 ! total clouds and precipiation 
 !         ifld = pbuf_get_fld_idx('AST')

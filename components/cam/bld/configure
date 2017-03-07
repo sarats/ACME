@@ -2012,7 +2012,7 @@ if ($crm eq "ON") { $cfg_cppdefs .= " -DCRM " }
 #Added cppdef for ecpp-Guangxing Lin
 if (defined $opts{'use_ECPP'}) { $cfg_cppdefs .= " -DECPP " }
 
-if ( defined $opts{'clubb_crm'})    { $cfg_cppdefs .= " -DCLUBB_CRM -DCLUBB_REAL_TYPE=dp"; }
+if ( defined $opts{'clubb_crm'})    { $cfg_cppdefs .= " -DCLUBB_CRM -DCLUBB_REAL_TYPE=dp -DCLUBB_SAM"; }
 
 # Configure CAM to produce IOP files for SCAM
 if ($camiop eq 'ON') { $cfg_cppdefs .= " -DBFB_CAM_SCAM_IOP"; }
@@ -2870,8 +2870,9 @@ sub write_filepath
            }
         }
         if ( defined $opts{'clubb_crm'}) {
-           print $fh "$camsrcdir/cam/src/physics/CLUBB_core\n";
           ##Guangxing Lin add for new SAM 
+           ##print $fh "$camsrcdir/cam/src/physics/CLUBB_core\n";
+           print $fh "$camsrcdir/cam/src/physics//crm/CLUBB\n";
            print $fh "$camsrcdir/cam/src/physics/crm/SGS_CLUBBkvhkvm\n";
         }
           ##Guangxing Lin add for new SAM 

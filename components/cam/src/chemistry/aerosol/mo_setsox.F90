@@ -158,7 +158,8 @@ contains
        xhnm,   &
        invariants, &
        qcw,    &
-       qin     &
+       qin,    &
+       aqso4_h2o2, aqso4_o3, xphlwcout &
        )
 
     !-----------------------------------------------------------------------      
@@ -206,7 +207,10 @@ contains
     real(r8),         intent(in)    :: invariants(:,:,:)
     real(r8), target, intent(inout) :: qcw(:,:,:)        ! cloud-borne aerosol (vmr)
     real(r8),         intent(inout) :: qin(:,:,:)        ! transported species ( vmr )
-
+    real(r8), dimension (ncol, pver), intent(out), optional  :: aqso4_h2o2                ! SO4 aqueous phase chemistry due to H2O2 (kg/m2)
+    real(r8), dimension(ncol, pver), intent(out), optional     :: aqso4_o3                  ! SO4 aqueous phase chemistry due to O3 (kg/m2)
+    real(r8), dimension(ncol, pver), intent(out), optional     :: xphlwcout                    ! pH value multiplied by lwc
+    
     !-----------------------------------------------------------------------      
     !      ... Local variables
     !
@@ -867,11 +871,18 @@ contains
        end do col_loop1
     end do ver_loop1
 
+    if(use_SPCAM .and. use_ECPP) then
+    call sox_cldaero_update( &
+         ncol, lchnk, loffset, dtime, mbar, pdel, press, tfld, cldnum, cldfrc, cfact, cldconc%xlwc, &
+         xdelso4hp, xh2so4, xso4, xso4_init, nh3g, hno3g, xnh3, xhno3, xnh4c,  xno3c, xmsa, xso2, xh2o2, qcw, qin,  aqso4_h2o2, aqso4_o3 )
+    
+     else
     call sox_cldaero_update( &
          ncol, lchnk, loffset, dtime, mbar, pdel, press, tfld, cldnum, cldfrc, cfact, cldconc%xlwc, &
          xdelso4hp, xh2so4, xso4, xso4_init, nh3g, hno3g, xnh3, xhno3, xnh4c,  xno3c, xmsa, xso2, xh2o2, qcw, qin )
-    
-    xphlwc(:,:) = 0._r8
+    end if
+
+     xphlwc(:,:) = 0._r8
     do k = 1, pver
        do i = 1, ncol
           if (cldfrc(i,k)>=1.e-5_r8 .and. lwc(i,k)>=1.e-8_r8) then
@@ -879,7 +890,12 @@ contains
           endif
        end do
     end do
-    !call outfld( 'XPH_LWC', xphlwc(:ncol,:), ncol , lchnk )!Guangxing Lin
+
+    if(.not.use_SPCAM) then
+      call outfld( 'XPH_LWC', xphlwc(:ncol,:), ncol , lchnk )!Guangxing Lin
+    else
+        xphlwcout(:, :) = xphlwc(:, :)
+    endif
 
     call sox_cldaero_destroy_obj(cldconc)
 

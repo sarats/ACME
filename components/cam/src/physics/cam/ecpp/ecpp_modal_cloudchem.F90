@@ -198,7 +198,7 @@ subroutine parampollu_tdx_cldchem(               &
 
         real(r8), allocatable :: aqso4_h2o2_tmp(:)
         real(r8), allocatable :: aqso4_o3_tmp(:)
-!        real(r8), allocatable :: xphlwc_tmp(:)
+        real(r8), allocatable :: xphlwc_tmp(:)
 
         real(r8), allocatable :: mmr(:, :), vmr(:,:), mmrcw(:, :), vmrcw(:, :)
 !==Guangxing Lin
@@ -290,7 +290,7 @@ subroutine parampollu_tdx_cldchem(               &
 
        allocate  (aqso4_h2o2_tmp(kts:ktecen))
        allocate  (aqso4_o3_tmp(kts:ktecen))
-       !allocate  (xphlwc_tmp(kts:ktecen))
+       allocate  (xphlwc_tmp(kts:ktecen))
 
        allocate  (qsrflx_full(pcols, gas_pcnst, nsrflx))
        allocate  (qqcwsrflx_full(pcols, gas_pcnst, nsrflx))
@@ -509,7 +509,8 @@ subroutine parampollu_tdx_cldchem(               &
                invariants_full(it:it,:,indexm), &  
                invariants_full(it:it,:,:),  &    
                vmrcw_3d,    &  
-               vmr_3d)           
+               vmr_3d,      &
+               aqso4_h2o2_tmp(:), aqso4_o3_tmp(:), xphlwc_tmp(:))           
                
 !          call setsox( ncol,   &
 !               p_tmp(iccpp:iccpp, :, jcls),   &
@@ -574,17 +575,17 @@ subroutine parampollu_tdx_cldchem(               &
               end if
               if (tmpa > afrac_cut_0p5) then
 !==Guangxing Lin
-                 !aqso4_h2o2 = aqso4_h2o2+tmpa * aqso4_h2o2_tmp(km)
-                 !aqso4_o3 = aqso4_o3 + tmpa * aqso4_o3_tmp(km)
-                 aqso4_h2o2 = aqso4_h2o2
-                 aqso4_o3 = aqso4_o3 
+                 aqso4_h2o2 = aqso4_h2o2+tmpa * aqso4_h2o2_tmp(km)
+                 aqso4_o3 = aqso4_o3 + tmpa * aqso4_o3_tmp(km)
+                 !aqso4_h2o2 = aqso4_h2o2
+                 !aqso4_o3 = aqso4_o3 
 !==Guangxing Lin
               end if 
 !
 ! xphlwc_tmp is defined in CAM( top to bottom), and xphlwc3d is defined in ECPP (bottom to top)
 !==Guangxing Lin
-             ! xphlwc3d(k,icc,jcls,ipp) = xphlwc3d(k,icc,jcls,ipp) + xphlwc_tmp(km) * tmpa
-              xphlwc3d(k,icc,jcls,ipp) = xphlwc3d(k,icc,jcls,ipp) 
+              xphlwc3d(k,icc,jcls,ipp) = xphlwc3d(k,icc,jcls,ipp) + xphlwc_tmp(km) * tmpa
+             ! xphlwc3d(k,icc,jcls,ipp) = xphlwc3d(k,icc,jcls,ipp) 
 !==Guangxing Lin
 
           end do
