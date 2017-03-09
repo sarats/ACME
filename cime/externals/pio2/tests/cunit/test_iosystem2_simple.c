@@ -97,9 +97,11 @@ int main(int argc, char **argv)
             ERR(ret);
         if (active)
             ERR(ERR_WRONG);
+        if ((ret = PIOc_iosystem_is_active(iosysid, NULL)))
+            ERR(ret);
 
         int numiotasks;
-        if (PIOc_get_numiotasks(iosysid + 42, &numiotasks) != PIO_EBADID)
+        if (PIOc_get_numiotasks(iosysid + TEST_VAL_42, &numiotasks) != PIO_EBADID)
             ERR(ERR_WRONG);
         if ((ret = PIOc_get_numiotasks(iosysid, NULL)))
             ERR(ret);
@@ -110,7 +112,7 @@ int main(int argc, char **argv)
             ERR(ERR_WRONG);
 
         int iorank;
-        if (PIOc_iotask_rank(iosysid + 42, &iorank) != PIO_EBADID)
+        if (PIOc_iotask_rank(iosysid + TEST_VAL_42, &iorank) != PIO_EBADID)
             ERR(ERR_WRONG);
         if ((ret = PIOc_iotask_rank(iosysid, NULL)))
             ERR(ret);
@@ -124,7 +126,7 @@ int main(int argc, char **argv)
 
         /* Both tasks are IO tasks. */
         bool ioproc;
-        if (PIOc_iam_iotask(iosysid + 42, &ioproc) != PIO_EBADID)
+        if (PIOc_iam_iotask(iosysid + TEST_VAL_42, &ioproc) != PIO_EBADID)
             ERR(ret);
         if ((ret = PIOc_iam_iotask(iosysid, NULL)))
             ERR(ret);
@@ -164,6 +166,19 @@ int main(int argc, char **argv)
                 if ((ret = PIOc_closefile(lncid)))
                     return ret;
             }
+
+            /* These should not work. */
+            if (PIOc_openfile(iosysid_world + TEST_VAL_42, &ncid, &flavor[i], fn[0], PIO_WRITE) != PIO_EBADID)
+                return ERR_WRONG;
+            if (PIOc_openfile(iosysid_world, NULL, &flavor[i], fn[0], PIO_WRITE) != PIO_EINVAL)
+                return ERR_WRONG;
+            if (PIOc_openfile(iosysid_world, &ncid, NULL, fn[0], PIO_WRITE) != PIO_EINVAL)
+                return ERR_WRONG;
+            if (PIOc_openfile(iosysid_world, &ncid, &flavor[i], NULL, PIO_WRITE) != PIO_EINVAL)
+                return ERR_WRONG;
+            int bad_iotype = flavor[i] + TEST_VAL_42;
+            if (PIOc_openfile(iosysid_world, &ncid, &bad_iotype, fn[0], PIO_WRITE) != PIO_EINVAL)
+                return ERR_WRONG;
 
             /* Open the first file with world iosystem. */
             if ((ret = PIOc_openfile(iosysid_world, &ncid, &flavor[i], fn[0], PIO_WRITE)))

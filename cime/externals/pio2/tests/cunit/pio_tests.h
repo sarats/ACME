@@ -20,6 +20,15 @@
  * the ParallelIO library. */
 #define NUM_FLAVORS 4
 
+/** Number of netCDF types. */
+#define NUM_NETCDF_TYPES 12
+
+/* Number of NetCDF classic types. */
+#define NUM_CLASSIC_TYPES 6
+
+/* Number of NetCDF-4 types. */
+#define NUM_NETCDF4_TYPES 12
+
 /* Number of sample files constructed for these tests. */
 #define NUM_SAMPLES 3
 
@@ -30,6 +39,9 @@
 #define ERR_WRONG 1112
 #define ERR_GPTL 1113
 #define ERR_MPI 1114
+
+/** The meaning of life, the universe, and everything. */
+#define TEST_VAL_42 42
 
 /** Handle MPI errors. This should only be used with MPI library
  * function calls. */
@@ -81,4 +93,8 @@ int test_all(int iosysid, int num_flavors, int *flavor, int my_rank, MPI_Comm te
 int run_test_main(int argc, char **argv, int min_ntasks, int max_ntasks,
                   int log_level, char *test_name, int *dim_len, int component_count,
                   int num_io_procs);
+
+/* Create a 2D decomposition used in some tests. */
+int create_decomposition_2d(int ntasks, int my_rank, int iosysid, int *dim_len_2d, int *ioid,
+                            int pio_type);
 #endif /* _PIO_TESTS_H */

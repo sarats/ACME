@@ -1,7 +1,5 @@
 /*
- * This program tests MPI_Alltoallw by having processor i send different
- * amounts of data to each processor.
- * The first test sends i items to processor i from all processors.
+ * This program tests some internal functions in the library.
  *
  * Jim Edwards
  * Ed Hartnett, 11/23/16
@@ -24,7 +22,9 @@
 
 #define TEST_MAX_GATHER_BLOCK_SIZE 32
 
-/* The actual tests are here. */
+/* Test MPI_Alltoallw by having processor i send different amounts of
+ * data to each processor.  The first test sends i items to processor
+ * i from all processors. */
 int run_spmd_tests(MPI_Comm test_comm)
 {
     int my_rank;  /* 0-based rank in test_comm. */
@@ -189,6 +189,19 @@ int run_sc_tests(MPI_Comm test_comm)
     if (gcd_array(SC_ARRAY_LEN, array4) != 1)
         return ERR_WRONG;
 
+    /* Test compute_one_dim. */
+    PIO_Offset start, count;
+    compute_one_dim(4, 4, my_rank, &start, &count);
+    if (start != my_rank || count != 1)
+        return ERR_WRONG;
+    compute_one_dim(400, 4, my_rank, &start, &count);
+    if (start != my_rank * 100 || count != 100)
+        return ERR_WRONG;
+    /* Left over data will go to task 3. */
+    compute_one_dim(5, 4, my_rank, &start, &count);
+    if (start != my_rank || count != (my_rank == 3 ? 2 : 1))
+        return ERR_WRONG;
+    printf("my_rank = %d start = %lld count = %lld\n", my_rank, start, count);
     return 0;
 }
 
@@ -205,6 +218,7 @@ int test_CalcStartandCount()
     long int psize;
     long int pgdims = 1;
     int scnt;
+    int ret;
 
     for (int i = 0; i < ndims; i++)
         pgdims *= gdims[i];
@@ -213,8 +227,9 @@ int test_CalcStartandCount()
     {
         for (iorank = 0; iorank < num_io_procs; iorank++)
         {
-            numaiotasks = CalcStartandCount(PIO_DOUBLE, ndims, gdims, num_io_procs, iorank,
-                                            start, kount);
+            if ((ret = CalcStartandCount(PIO_DOUBLE, ndims, gdims, num_io_procs, iorank,
+                                         start, kount, &numaiotasks)))
+                return ret;
             if (iorank < numaiotasks)
                 printf("iorank %d start %lld %lld count %lld %lld\n", iorank, start[0],
                        start[1], kount[0], kount[1]);
@@ -245,6 +260,324 @@ int test_CalcStartandCount()
     return 0;
 }
 
+/* Tesst some list stuff. */
+int test_lists()
+{
+    file_desc_t *fdesc;
+    
+    /* Test that bad input is correctly rejected. */
+    if (pio_delete_iodesc_from_list(42) != PIO_EBADID)
+        return ERR_WRONG;
+    if (pio_delete_iosystem_from_list(42) != PIO_EBADID)
+        return ERR_WRONG;
+    if (pio_delete_file_from_list(42) != PIO_EBADID)
+        return ERR_WRONG;
+    if (pio_get_file(42, NULL) != PIO_EINVAL)
+        return ERR_WRONG;
+    if (pio_get_file(42, &fdesc) != PIO_EBADID)
+        return ERR_WRONG;
+    return 0;
+}
+
+/* Test some of the rearranger utility functions. */
+int test_rearranger_opts1()
+{
+    rearr_comm_fc_opt_t *ro1;
+    rearr_comm_fc_opt_t *ro2;
+    rearr_comm_fc_opt_t *ro3;
+
+    if (!(ro1 = calloc(1, sizeof(rearr_comm_fc_opt_t))))
+        return ERR_AWFUL;
+    if (!(ro2 = calloc(1, sizeof(rearr_comm_fc_opt_t))))
+        return ERR_AWFUL;
+    if (!(ro3 = calloc(1, sizeof(rearr_comm_fc_opt_t))))
+        return ERR_AWFUL;
+
+    /* This should not work. */
+    if (PIOc_set_rearr_opts(42, 1, 1, 0, 0, 0, 0, 0, 0) != PIO_EBADID)
+        return ERR_WRONG;
+
+    /* ro1 and ro2 are the same. */
+    if (!cmp_rearr_comm_fc_opts(ro1, ro2))
+        return ERR_WRONG;
+
+    /* Make ro3 different. */
+    ro3->enable_hs = 1;
+    if (cmp_rearr_comm_fc_opts(ro1, ro3))
+        return ERR_WRONG;
+    ro3->enable_hs = 0;
+    ro3->enable_isend = 1;
+    if (cmp_rearr_comm_fc_opts(ro1, ro3))
+        return ERR_WRONG;
+    ro3->enable_isend = 0;
+    ro3->max_pend_req = 1;
+    if (cmp_rearr_comm_fc_opts(ro1, ro3))
+        return ERR_WRONG;
+
+    /* Free resourses. */
+    free(ro1);
+    free(ro2);
+    free(ro3);
+    
+    return 0;
+}
+
+/* Test some of the rearranger utility functions. */
+int test_cmp_rearr_opts()
+{
+    rearr_opt_t ro1;
+    rearr_opt_t ro2;
+
+    ro1.comm_type = PIO_REARR_COMM_P2P;
+    ro2.comm_type = PIO_REARR_COMM_P2P;
+
+    ro1.fcd = PIO_REARR_COMM_FC_2D_ENABLE;
+    ro2.fcd = PIO_REARR_COMM_FC_2D_ENABLE;
+
+    ro1.comm_fc_opts_comp2io.enable_hs = 0;
+    ro1.comm_fc_opts_comp2io.enable_isend = 0;
+    ro1.comm_fc_opts_comp2io.max_pend_req = 0;
+
+    ro1.comm_fc_opts_io2comp.enable_hs = 0;
+    ro1.comm_fc_opts_io2comp.enable_isend = 0;
+    ro1.comm_fc_opts_io2comp.max_pend_req = 0;
+    
+    ro2.comm_fc_opts_comp2io.enable_hs = 0;
+    ro2.comm_fc_opts_comp2io.enable_isend = 0;
+    ro2.comm_fc_opts_comp2io.max_pend_req = 0;
+
+    ro2.comm_fc_opts_io2comp.enable_hs = 0;
+    ro2.comm_fc_opts_io2comp.enable_isend = 0;
+    ro2.comm_fc_opts_io2comp.max_pend_req = 0;
+
+    /* They are equal. */
+    if (!cmp_rearr_opts(&ro1, &ro2))
+        return ERR_WRONG;
+
+    /* Change something. */
+    ro1.comm_type = PIO_REARR_COMM_COLL;
+
+    /* They are not equal. */
+    if (cmp_rearr_opts(&ro1, &ro2))
+        return ERR_WRONG;
+
+    /* Change something. */
+    ro2.comm_type = PIO_REARR_COMM_COLL;
+    ro1.fcd = PIO_REARR_COMM_FC_2D_DISABLE;
+    
+    /* They are not equal. */
+    if (cmp_rearr_opts(&ro1, &ro2))
+        return ERR_WRONG;
+
+    ro2.fcd = PIO_REARR_COMM_FC_2D_DISABLE;
+
+    /* They are equal again. */
+    if (!cmp_rearr_opts(&ro1, &ro2))
+        return ERR_WRONG;
+    
+    return 0;
+}
+
+/* Test some of the rearranger utility functions. */
+int test_rearranger_opts3()
+{
+    iosystem_desc_t my_ios;
+    iosystem_desc_t *ios = &my_ios;
+
+    /* I'm not sure what the point of this function is... */
+    check_and_reset_rearr_opts(ios);
+    
+    return 0;
+}
+
+/* Test the compare_offsets() function. */
+int test_compare_offsets()
+{
+    mapsort m1, m2, m3;
+
+    m1.rfrom = 0;
+    m1.soffset = 0;
+    m1.iomap = 0;
+    m2.rfrom = 0;
+    m2.soffset = 0;
+    m2.iomap = 0;
+    m3.rfrom = 0;
+    m3.soffset = 0;
+    m3.iomap = 1;
+
+    /* Return 0 if either or both parameters are null. */
+    if (compare_offsets(NULL, &m2))
+        return ERR_WRONG;
+    if (compare_offsets(&m1, NULL))
+        return ERR_WRONG;
+    if (compare_offsets(NULL, NULL))
+        return ERR_WRONG;
+
+    /* m1 and m2 are the same. */
+    if (compare_offsets(&m1, &m2))
+        return ERR_WRONG;
+
+    /* m1 and m3 are different. */
+    if (compare_offsets(&m1, &m3) != -1)
+        return ERR_WRONG;
+    return 0;
+}
+
+/* Test the ceil2() and pair() functions. */
+int test_ceil2_pair()
+{
+    /* Test the ceil2() function. */
+    if (ceil2(1) != 1)
+        return ERR_WRONG;
+    if (ceil2(-100) != 1)
+        return ERR_WRONG;
+    if (ceil2(2) != 2)
+        return ERR_WRONG;
+    if (ceil2(3) != 4)
+        return ERR_WRONG;
+    if (ceil2(16) != 16)
+        return ERR_WRONG;
+    if (ceil2(17) != 32)
+        return ERR_WRONG;
+
+    /* Test the pair() function. */
+    if (pair(4, 0, 0) != 1)
+        return ERR_WRONG;
+    if (pair(4, 2, 2) != 1)
+        return ERR_WRONG;
+    
+    return 0;
+}
+
+/* Test the function that finds an MPI type to match a PIO type. */
+int test_find_mpi_type()
+{
+    MPI_Datatype mpi_type;
+    int type_size;
+    int ret;
+
+    /* This should not work. */
+    if (find_mpi_type(PIO_BYTE + 42, &mpi_type, &type_size) != PIO_EBADTYPE)
+        return ERR_WRONG;
+
+    /* Try every atomic type. */
+    if ((ret = find_mpi_type(PIO_BYTE, &mpi_type, &type_size)))
+        return ret;
+    if (mpi_type != MPI_BYTE || type_size != 1)
+        return ERR_WRONG;
+
+    if ((ret = find_mpi_type(PIO_CHAR, &mpi_type, &type_size)))
+        return ret;
+    if (mpi_type != MPI_CHAR || type_size != 1)
+        return ERR_WRONG;
+
+    if ((ret = find_mpi_type(PIO_SHORT, &mpi_type, &type_size)))
+        return ret;
+    if (mpi_type != MPI_SHORT || type_size != 2)
+        return ERR_WRONG;
+
+    if ((ret = find_mpi_type(PIO_INT, &mpi_type, &type_size)))
+        return ret;
+    if (mpi_type != MPI_INT || type_size != 4)
+        return ERR_WRONG;
+
+    if ((ret = find_mpi_type(PIO_FLOAT, &mpi_type, &type_size)))
+        return ret;
+    if (mpi_type != MPI_FLOAT || type_size != 4)
+        return ERR_WRONG;
+
+    if ((ret = find_mpi_type(PIO_DOUBLE, &mpi_type, &type_size)))
+        return ret;
+    if (mpi_type != MPI_DOUBLE || type_size != 8)
+        return ERR_WRONG;
+
+    /* These should also work. */
+    if ((ret = find_mpi_type(PIO_INT, &mpi_type, NULL)))
+        return ret;
+    if (mpi_type != MPI_INT)
+        return ERR_WRONG;
+    if ((ret = find_mpi_type(PIO_INT, NULL, &type_size)))
+        return ret;
+    if (type_size != 4)
+        return ERR_WRONG;
+    if ((ret = find_mpi_type(PIO_INT, NULL, NULL)))
+        return ret;
+
+#ifdef _NETCDF4
+    if ((ret = find_mpi_type(PIO_UBYTE, &mpi_type, &type_size)))
+        return ret;
+    if (mpi_type != MPI_UNSIGNED_CHAR || type_size != 1)
+        return ERR_WRONG;
+
+    if ((ret = find_mpi_type(PIO_USHORT, &mpi_type, &type_size)))
+        return ret;
+    if (mpi_type != MPI_UNSIGNED_SHORT || type_size != 2)
+        return ERR_WRONG;
+
+    if ((ret = find_mpi_type(PIO_UINT, &mpi_type, &type_size)))
+        return ret;
+    if (mpi_type != MPI_UNSIGNED || type_size != 4)
+        return ERR_WRONG;
+
+    if ((ret = find_mpi_type(PIO_INT64, &mpi_type, &type_size)))
+        return ret;
+    if (mpi_type != MPI_LONG_LONG || type_size != 8)
+        return ERR_WRONG;
+
+    if ((ret = find_mpi_type(PIO_UINT64, &mpi_type, &type_size)))
+        return ret;
+    if (mpi_type != MPI_UNSIGNED_LONG_LONG || type_size != 8)
+        return ERR_WRONG;
+
+    if ((ret = find_mpi_type(PIO_STRING, &mpi_type, &type_size)))
+        return ret;
+    if (mpi_type != MPI_CHAR || type_size != 1)
+        return ERR_WRONG;
+
+#endif /* _NETCDF4 */
+    return PIO_NOERR;
+}
+
+int test_misc()
+{
+    wmulti_buffer wmb;
+
+    /* This should not work. */
+    if (flush_buffer(TEST_VAL_42, &wmb, 0) != PIO_EBADID)
+        return ERR_WRONG;
+
+    /* This should not work either. */
+    if (PIOc_set_rearr_opts(TEST_VAL_42, 0, 0, false, false, 0, false,
+                            false, 0) != PIO_EBADID)
+        return ERR_WRONG;
+    
+    return 0;
+}
+
+/* Test the create_mpi_datatypes() function. 
+ * @returns 0 for success, error code otherwise.*/
+int test_create_mpi_datatypes()
+{
+    MPI_Datatype basetype = MPI_INT;
+    int msgcnt = 1;
+    PIO_Offset mindex[4] = {0, 0, 0, 0};
+    int mcount[4] = {1, 1, 1, 1};
+    int *mfrom = NULL;
+    MPI_Datatype mtype;
+    int mpierr;
+    int ret;
+
+    /* Create an MPI data type. */
+    if ((ret = create_mpi_datatypes(basetype, msgcnt, mindex, mcount, mfrom, &mtype)))
+        return ret;
+
+    /* Free the type. */
+    if ((mpierr = MPI_Type_free(&mtype)))
+        return ERR_WRONG;
+    
+    return 0;
+}
+
 /* Run Tests for pio_spmd.c functions. */
 int main(int argc, char **argv)
 {
@@ -272,6 +605,42 @@ int main(int argc, char **argv)
         
         printf("%d running CalcStartandCount test code\n", my_rank);
         if ((ret = test_CalcStartandCount()))
+            return ret;
+
+        printf("%d running list tests\n", my_rank);
+        if ((ret = test_lists()))
+            return ret;
+
+        printf("%d running rearranger opts tests 1\n", my_rank);
+        if ((ret = test_rearranger_opts1()))
+            return ret;
+
+        printf("%d running tests for cmp_rearr_opts()\n", my_rank);
+        if ((ret = test_cmp_rearr_opts()))
+            return ret;
+
+        printf("%d running rearranger opts tests 3\n", my_rank);
+        if ((ret = test_rearranger_opts3()))
+            return ret;
+
+        printf("%d running compare_offsets tests\n", my_rank);
+        if ((ret = test_compare_offsets()))
+            return ret;
+
+        printf("%d running ceil2/pair tests\n", my_rank);
+        if ((ret = test_ceil2_pair()))
+            return ret;
+
+        printf("%d running find_mpi_type tests\n", my_rank);
+        if ((ret = test_find_mpi_type()))
+            return ret;
+
+        printf("%d running create_mpi_datatypes tests\n", my_rank);
+        if ((ret = test_create_mpi_datatypes()))
+            return ret;
+
+        printf("%d running misc tests\n", my_rank);
+        if ((ret = test_misc()))
             return ret;
 
     } /* endif my_rank < TARGET_NTASKS */

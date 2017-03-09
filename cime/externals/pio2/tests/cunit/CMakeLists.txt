@@ -57,17 +57,48 @@ if (NOT PIO_USE_MPISERIAL)
   add_dependencies (tests test_iosystem3)
   add_executable (test_pioc EXCLUDE_FROM_ALL test_pioc.c test_common.c test_shared.c)
   target_link_libraries (test_pioc pioc)
+  add_executable (test_pioc_unlim EXCLUDE_FROM_ALL test_pioc_unlim.c test_common.c test_shared.c)
+  target_link_libraries (test_pioc_unlim pioc)
   add_executable (test_pioc_putget EXCLUDE_FROM_ALL test_pioc_putget.c test_common.c test_shared.c)
   target_link_libraries (test_pioc_putget pioc)
+  add_executable (test_pioc_fill EXCLUDE_FROM_ALL test_pioc_fill.c test_common.c test_shared.c)
+  target_link_libraries (test_pioc_fill pioc)
+  add_executable (test_darray EXCLUDE_FROM_ALL test_darray.c test_common.c)
+  target_link_libraries (test_darray pioc)
+  add_executable (test_darray_multi EXCLUDE_FROM_ALL test_darray_multi.c test_common.c)
+  target_link_libraries (test_darray_multi pioc)
+  add_executable (test_darray_multivar EXCLUDE_FROM_ALL test_darray_multivar.c test_common.c)
+  target_link_libraries (test_darray_multivar pioc)
+  add_executable (test_darray_1d EXCLUDE_FROM_ALL test_darray_1d.c test_common.c)
+  target_link_libraries (test_darray_1d pioc)  
+  add_executable (test_darray_3d EXCLUDE_FROM_ALL test_darray_3d.c test_common.c)
+  target_link_libraries (test_darray_3d pioc)  
+  add_executable (test_darray_uneven EXCLUDE_FROM_ALL test_darray_uneven.c test_common.c)
+  target_link_libraries (test_darray_uneven pioc)  
+  add_executable (test_decomps EXCLUDE_FROM_ALL test_decomps.c test_common.c)
+  target_link_libraries (test_decomps pioc)
 endif ()
 add_executable (test_spmd EXCLUDE_FROM_ALL test_spmd.c test_common.c)
 target_link_libraries (test_spmd pioc)
 add_dependencies (tests test_spmd)
 add_dependencies (tests test_pioc)
+add_dependencies (tests test_pioc_unlim)
 add_dependencies (tests test_pioc_putget)
+add_dependencies (tests test_pioc_fill)
+add_dependencies (tests test_darray)
+add_dependencies (tests test_darray_multi)
+add_dependencies (tests test_darray_multivar)
+add_dependencies (tests test_darray_1d)
+add_dependencies (tests test_darray_3d)
+add_dependencies (tests test_darray_uneven)
+add_dependencies (tests test_decomps)
 
 # Test Timeout in seconds.
-set (DEFAULT_TEST_TIMEOUT 60)
+if (PIO_VALGRIND_CHECK)
+  set (DEFAULT_TEST_TIMEOUT 120)
+else ()
+  set (DEFAULT_TEST_TIMEOUT 60)
+endif ()
 
 # All tests need a certain number of tasks, but they should be able to
 # run successfully with more than they need. Test this by providing an
@@ -128,8 +159,44 @@ else ()
     EXECUTABLE ${CMAKE_CURRENT_BINARY_DIR}/test_pioc
     NUMPROCS ${AT_LEAST_FOUR_TASKS}
     TIMEOUT ${DEFAULT_TEST_TIMEOUT})
+  add_mpi_test(test_pioc_unlim
+    EXECUTABLE ${CMAKE_CURRENT_BINARY_DIR}/test_pioc_unlim
+    NUMPROCS ${AT_LEAST_FOUR_TASKS}
+    TIMEOUT ${DEFAULT_TEST_TIMEOUT})
   add_mpi_test(test_pioc_putget
     EXECUTABLE ${CMAKE_CURRENT_BINARY_DIR}/test_pioc_putget
+    NUMPROCS ${AT_LEAST_FOUR_TASKS}
+    TIMEOUT ${DEFAULT_TEST_TIMEOUT})
+  add_mpi_test(test_pioc_fill
+    EXECUTABLE ${CMAKE_CURRENT_BINARY_DIR}/test_pioc_fill
+    NUMPROCS ${AT_LEAST_FOUR_TASKS}
+    TIMEOUT ${DEFAULT_TEST_TIMEOUT})
+  add_mpi_test(test_darray
+    EXECUTABLE ${CMAKE_CURRENT_BINARY_DIR}/test_darray
+    NUMPROCS ${AT_LEAST_FOUR_TASKS}
+    TIMEOUT ${DEFAULT_TEST_TIMEOUT})
+  add_mpi_test(test_darray_multi
+    EXECUTABLE ${CMAKE_CURRENT_BINARY_DIR}/test_darray_multi
+    NUMPROCS ${AT_LEAST_FOUR_TASKS}
+    TIMEOUT ${DEFAULT_TEST_TIMEOUT})
+  add_mpi_test(test_darray_multivar
+    EXECUTABLE ${CMAKE_CURRENT_BINARY_DIR}/test_darray_multivar
+    NUMPROCS ${AT_LEAST_FOUR_TASKS}
+    TIMEOUT ${DEFAULT_TEST_TIMEOUT})
+  add_mpi_test(test_darray_1d
+    EXECUTABLE ${CMAKE_CURRENT_BINARY_DIR}/test_darray_1d
+    NUMPROCS ${AT_LEAST_FOUR_TASKS}
+    TIMEOUT ${DEFAULT_TEST_TIMEOUT})
+  add_mpi_test(test_darray_3d
+    EXECUTABLE ${CMAKE_CURRENT_BINARY_DIR}/test_darray_3d
+    NUMPROCS ${AT_LEAST_FOUR_TASKS}
+    TIMEOUT ${DEFAULT_TEST_TIMEOUT})
+  add_mpi_test(test_darray_uneven
+    EXECUTABLE ${CMAKE_CURRENT_BINARY_DIR}/test_darray_uneven
+    NUMPROCS ${AT_LEAST_FOUR_TASKS}
+    TIMEOUT ${DEFAULT_TEST_TIMEOUT})
+  add_mpi_test(test_decomps
+    EXECUTABLE ${CMAKE_CURRENT_BINARY_DIR}/test_decomps
     NUMPROCS ${AT_LEAST_FOUR_TASKS}
     TIMEOUT ${DEFAULT_TEST_TIMEOUT})
 endif ()

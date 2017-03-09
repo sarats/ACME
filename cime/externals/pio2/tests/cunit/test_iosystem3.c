@@ -59,8 +59,7 @@ int create_file(MPI_Comm comm, int iosysid, int format, char *filename,
         return ret;
 
     /* Write an attribute. */
-    if ((ret = PIOc_put_att_text(ncid, varid, attname, strlen(filename),
-                                 filename)))
+    if ((ret = PIOc_put_att_text(ncid, varid, attname, strlen(filename), filename)))
         return ret;
 
     /* End define mode. */
@@ -233,6 +232,16 @@ int main(int argc, char **argv)
         if (even_comm != MPI_COMM_NULL)
         {
             if ((ret = PIOc_Init_Intracomm(even_comm, NUM_IO1, STRIDE1, BASE1, REARRANGER, &even_iosysid)))
+                ERR(ret);
+
+            /* These should not work. */
+            if (PIOc_set_hint(even_iosysid + TEST_VAL_42, NULL, NULL) != PIO_EBADID)
+                ERR(ERR_WRONG);
+            if (PIOc_set_hint(even_iosysid, NULL, NULL) != PIO_EINVAL)
+                ERR(ERR_WRONG);
+
+            /* Set the hint (which will be ignored). */
+            if ((ret = PIOc_set_hint(even_iosysid, "hint", "hint_value")))
                 ERR(ret);
 
             /* Set the error handler. */

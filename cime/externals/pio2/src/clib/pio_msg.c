@@ -106,6 +106,48 @@ int inq_format_handler(iosystem_desc_t *ios)
     return PIO_NOERR;
 }
 
+/** This function is run on the IO tasks to set the file fill mode.
+ *
+ * @param ios pointer to the iosystem info.
+ * @returns 0 for success, error code otherwise.
+ * @internal
+ */
+int set_fill_handler(iosystem_desc_t *ios)
+{
+    int ncid;
+    int fillmode;
+    int old_modep_present;
+    int old_mode, *old_modep = NULL;
+    int mpierr;
+    int ret;
+
+    LOG((1, "set_fill_handler"));
+    assert(ios);
+
+    /* Get the parameters for this function that the the comp master
+     * task is broadcasting. */
+    if ((mpierr = MPI_Bcast(&ncid, 1, MPI_INT, 0, ios->intercomm)))
+        return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
+    if ((mpierr = MPI_Bcast(&fillmode, 1, MPI_INT, 0, ios->intercomm)))
+        return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
+    if ((mpierr = MPI_Bcast(&old_modep_present, 1, MPI_INT, 0, ios->intercomm)))
+        return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
+    LOG((2, "set_fill_handler got parameters ncid = %d fillmode = %d old_modep_present = %d",
+         ncid, fillmode, old_modep_present));
+
+    /* Manage NULL pointers. */
+    if (old_modep_present)
+        old_modep = &old_mode;
+
+    /* Call the function. */
+    if ((ret = PIOc_set_fill(ncid, fillmode, old_modep)))
+        return pio_err(ios, NULL, ret, __FILE__, __LINE__);
+
+    LOG((1, "set_fill_handler succeeded!"));
+
+    return PIO_NOERR;
+}
+
 /** This function is run on the IO tasks to create a netCDF file.
  *
  * @param ios pointer to the iosystem info.
@@ -118,7 +160,6 @@ int create_file_handler(iosystem_desc_t *ios)
     int ncid;
     int len;
     int iotype;
-    char filename[PIO_MAX_NAME + 1];
     int mode;
     int mpierr;
     int ret;
@@ -130,17 +171,17 @@ int create_file_handler(iosystem_desc_t *ios)
      * task is broadcasting. */
     if ((mpierr = MPI_Bcast(&len, 1, MPI_INT, 0, ios->intercomm)))
         return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
-    LOG((1, "create_file_handler got parameter len = %d", len));
-    pioassert(len <= PIO_MAX_NAME, "len > PIO_MAX_NAME", __FILE__, __LINE__);
-    if ((mpierr = MPI_Bcast((void *)filename, len + 1, MPI_CHAR, 0,
-                            ios->intercomm)))
+
+    /* Get space for the filename. */
+    char filename[len + 1];
+
+    if ((mpierr = MPI_Bcast(filename, len + 1, MPI_CHAR, 0, ios->intercomm)))
         return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
     if ((mpierr = MPI_Bcast(&iotype, 1, MPI_INT, 0, ios->intercomm)))
         return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
     if ((mpierr = MPI_Bcast(&mode, 1, MPI_INT, 0, ios->intercomm)))
         return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
-    LOG((1, "create_file_handler got parameters len = %d "
-         "filename = %s iotype = %d mode = %d",
+    LOG((1, "create_file_handler got parameters len = %d filename = %s iotype = %d mode = %d",
          len, filename, iotype, mode));
 
     /* Call the create file function. */
@@ -314,8 +355,7 @@ int inq_dimid_handler(iosystem_desc_t *ios)
         return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
     if ((mpierr = MPI_Bcast(&namelen, 1, MPI_INT, 0, ios->intercomm)))
         return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
-    pioassert(namelen <= PIO_MAX_NAME, "namelen > PIO_MAX_NAME", __FILE__, __LINE__);
-    if ((mpierr = MPI_Bcast((void *)name, namelen + 1, MPI_CHAR, 0, ios->intercomm)))
+    if ((mpierr = MPI_Bcast(name, namelen + 1, MPI_CHAR, 0, ios->intercomm)))
         return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
     if ((mpierr = MPI_Bcast(&id_present, 1, MPI_CHAR, 0, ios->intercomm)))
         return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
@@ -365,8 +405,7 @@ int inq_att_handler(iosystem_desc_t *ios)
         return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
     if ((mpierr = MPI_Bcast(&namelen, 1, MPI_INT,  ios->compmaster, ios->intercomm)))
         return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
-    pioassert(namelen <= PIO_MAX_NAME, "namelen > PIO_MAX_NAME", __FILE__, __LINE__);
-    if ((mpierr = MPI_Bcast((void *)name, namelen + 1, MPI_CHAR, ios->compmaster,
+    if ((mpierr = MPI_Bcast(name, namelen + 1, MPI_CHAR, ios->compmaster,
                             ios->intercomm)))
         return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
     if ((mpierr = MPI_Bcast(&xtype_present, 1, MPI_CHAR, 0, ios->intercomm)))
@@ -464,7 +503,6 @@ int inq_attid_handler(iosystem_desc_t *ios)
         return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
     if ((mpierr = MPI_Bcast(&namelen, 1, MPI_INT,  ios->compmaster, ios->intercomm)))
         return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
-    pioassert(namelen <= PIO_MAX_NAME, "namelen > PIO_MAX_NAME", __FILE__, __LINE__);
     if ((mpierr = MPI_Bcast(name, namelen + 1, MPI_CHAR,  ios->compmaster, ios->intercomm)))
         return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
     if ((mpierr = MPI_Bcast(&id_present, 1, MPI_CHAR, 0, ios->intercomm)))
@@ -499,9 +537,12 @@ int att_put_handler(iosystem_desc_t *ios)
     int ret;
     char name[PIO_MAX_NAME + 1];
     int namelen;
-    PIO_Offset attlen, typelen;
-    nc_type atttype;
-    int *op;
+    PIO_Offset attlen;  /* Number of elements in att array. */
+    nc_type atttype;    /* Type of att in file. */
+    PIO_Offset atttype_len; /* Length in bytes of one elementy of type atttype. */
+    nc_type memtype;    /* Type of att data in memory. */
+    PIO_Offset memtype_len; /* Length of element of memtype. */
+    void *op;
 
     LOG((1, "att_put_handler"));
     assert(ios);
@@ -512,38 +553,44 @@ int att_put_handler(iosystem_desc_t *ios)
         return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
     if ((mpierr = MPI_Bcast(&varid, 1, MPI_INT, 0, ios->intercomm)))
         return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
-    mpierr = MPI_Bcast(&namelen, 1, MPI_INT,  ios->compmaster, ios->intercomm);
-    pioassert(namelen <= PIO_MAX_NAME, "namelen > PIO_MAX_NAME", __FILE__, __LINE__);
-    mpierr = MPI_Bcast((void *)name, namelen + 1, MPI_CHAR, ios->compmaster,
-                       ios->intercomm);
+    if ((mpierr = MPI_Bcast(&namelen, 1, MPI_INT,  ios->compmaster, ios->intercomm)))
+        return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
+    if ((mpierr = MPI_Bcast(name, namelen + 1, MPI_CHAR, ios->compmaster, ios->intercomm)))
+        return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
     if ((mpierr = MPI_Bcast(&atttype, 1, MPI_INT, 0, ios->intercomm)))
         return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
     if ((mpierr = MPI_Bcast(&attlen, 1, MPI_OFFSET, 0, ios->intercomm)))
         return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
-    if ((mpierr = MPI_Bcast(&typelen, 1, MPI_OFFSET, 0, ios->intercomm)))
+    if ((mpierr = MPI_Bcast(&atttype_len, 1, MPI_OFFSET, 0, ios->intercomm)))
         return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
-    if (!(op = malloc(attlen * typelen)))
+    if ((mpierr = MPI_Bcast(&memtype, 1, MPI_INT, 0, ios->intercomm)))
+        return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
+    if ((mpierr = MPI_Bcast(&memtype_len, 1, MPI_OFFSET, 0, ios->intercomm)))
+        return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
+
+    /* Allocate memory for the attribute data. */
+    if (!(op = malloc(attlen * memtype_len)))
         return pio_err(ios, NULL, PIO_ENOMEM, __FILE__, __LINE__);
-    if ((mpierr = MPI_Bcast((void *)op, attlen * typelen, MPI_BYTE, 0, ios->intercomm)))
+    if ((mpierr = MPI_Bcast(op, attlen * memtype_len, MPI_BYTE, 0, ios->intercomm)))
     {
         free(op);
         return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
     }
     LOG((1, "att_put_handler ncid = %d varid = %d namelen = %d name = %s"
-         "atttype = %d attlen = %d typelen = %d",
-         ncid, varid, namelen, name, atttype, attlen, typelen));
+         "atttype = %d attlen = %d atttype_len = %d memtype = %d memtype_len = 5d",
+         ncid, varid, namelen, name, atttype, attlen, atttype_len, memtype, memtype_len));
 
     /* Call the function to write the attribute. */
-    if ((ret = PIOc_put_att(ncid, varid, name, atttype, attlen, op)))
-    {
-        free(op);
-        return pio_err(ios, NULL, ret, __FILE__, __LINE__);
-    }
+    ret = PIOc_put_att_tc(ncid, varid, name, atttype, attlen, memtype, op);
 
     /* Free resources. */
     free(op);
 
-    LOG((2, "put_handler complete!"));
+    /* Did it work? */
+    if (ret)
+        return pio_err(ios, NULL, ret, __FILE__, __LINE__);
+
+    LOG((2, "att_put_handler complete!"));
     return PIO_NOERR;
 }
 
@@ -560,13 +607,16 @@ int att_get_handler(iosystem_desc_t *ios)
     int ncid;
     int varid;
     int mpierr;
-    int ret;
     char name[PIO_MAX_NAME + 1];
     int namelen;
-    PIO_Offset attlen, typelen;
-    nc_type atttype;
+    PIO_Offset attlen;
+    nc_type atttype;        /* Type of att in file. */
+    PIO_Offset atttype_len; /* Length in bytes of an element of attype. */
+    nc_type memtype;        /* Type of att in memory. */
+    PIO_Offset memtype_len; /* Length in bytes of an element of memype. */
     int *ip;
     int iotype;
+    int ret;
 
     LOG((1, "att_get_handler"));
     assert(ios);
@@ -577,35 +627,39 @@ int att_get_handler(iosystem_desc_t *ios)
         return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
     if ((mpierr = MPI_Bcast(&varid, 1, MPI_INT, 0, ios->intercomm)))
         return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
-    mpierr = MPI_Bcast(&namelen, 1, MPI_INT,  ios->compmaster, ios->intercomm);
-    pioassert(namelen <= PIO_MAX_NAME, "namelen > PIO_MAX_NAME", __FILE__, __LINE__);
-    mpierr = MPI_Bcast((void *)name, namelen + 1, MPI_CHAR, ios->compmaster,
-                       ios->intercomm);
+    if ((mpierr = MPI_Bcast(&namelen, 1, MPI_INT,  ios->compmaster, ios->intercomm)))
+        return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
+    if ((mpierr = MPI_Bcast(name, namelen + 1, MPI_CHAR, ios->compmaster, ios->intercomm)))
+        return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
     if ((mpierr = MPI_Bcast(&iotype, 1, MPI_INT, 0, ios->intercomm)))
         return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
     if ((mpierr = MPI_Bcast(&atttype, 1, MPI_INT, 0, ios->intercomm)))
         return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
     if ((mpierr = MPI_Bcast(&attlen, 1, MPI_OFFSET, 0, ios->intercomm)))
         return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
-    if ((mpierr = MPI_Bcast(&typelen, 1, MPI_OFFSET, 0, ios->intercomm)))
+    if ((mpierr = MPI_Bcast(&atttype_len, 1, MPI_OFFSET, 0, ios->intercomm)))
+        return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
+    if ((mpierr = MPI_Bcast(&memtype, 1, MPI_INT, 0, ios->intercomm)))
+        return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
+    if ((mpierr = MPI_Bcast(&memtype_len, 1, MPI_OFFSET, 0, ios->intercomm)))
         return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
     LOG((1, "att_get_handler ncid = %d varid = %d namelen = %d name = %s iotype = %d"
-         "atttype = %d attlen = %d typelen = %d",
-         ncid, varid, namelen, name, iotype, atttype, attlen, typelen));
+         " atttype = %d attlen = %d atttype_len = %d memtype = %d memtype_len = %d",
+         ncid, varid, namelen, name, iotype, atttype, attlen, atttype_len, memtype, memtype_len));
 
     /* Allocate space for the attribute data. */
-    if (!(ip = malloc(attlen * typelen)))
+    if (!(ip = malloc(attlen * memtype_len)))
         return pio_err(ios, NULL, PIO_ENOMEM, __FILE__, __LINE__);
 
     /* Call the function to read the attribute. */
-    if ((ret = PIOc_get_att(ncid, varid, name, ip)))
-    {
-        free(ip);
-        return pio_err(ios, NULL, ret, __FILE__, __LINE__);
-    }
+    ret = PIOc_get_att_tc(ncid, varid, name, memtype, ip);
 
     /* Free resources. */
     free(ip);
+
+    /* Did it work? */
+    if (ret)
+        return pio_err(ios, NULL, ret, __FILE__, __LINE__);
 
     return PIO_NOERR;
 }
@@ -621,14 +675,16 @@ int put_vars_handler(iosystem_desc_t *ios)
 {
     int ncid;
     int varid;
-    int mpierr;
-    PIO_Offset typelen; /** Length (in bytes) of this type. */
-    nc_type xtype; /** Type of the data being written. */
-    char stride_present;
-    PIO_Offset *startp = NULL, *countp = NULL, *stridep = NULL;
-    int ndims; /** Number of dimensions. */
-    void *buf; /** Buffer for data storage. */
+    PIO_Offset typelen;  /** Length (in bytes) of this type. */
+    nc_type xtype;       /** Type of the data being written. */
+    char stride_present; /** Zero if user passed a NULL stride. */
+    PIO_Offset *startp = NULL;
+    PIO_Offset *countp = NULL;
+    PIO_Offset *stridep = NULL;
+    int ndims;           /** Number of dimensions. */
+    void *buf;           /** Buffer for data storage. */
     PIO_Offset num_elem; /** Number of data elements in the buffer. */
+    int mpierr;          /** Error code from MPI function calls. */
 
     LOG((1, "put_vars_handler"));
     assert(ios);
@@ -645,18 +701,14 @@ int put_vars_handler(iosystem_desc_t *ios)
     /* Now we know how big to make these arrays. */
     PIO_Offset start[ndims], count[ndims], stride[ndims];
 
-    if (!mpierr)
-    {
-        if ((mpierr = MPI_Bcast(start, ndims, MPI_OFFSET, 0, ios->intercomm)))
-            return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
-        LOG((1, "put_vars_handler getting start[0] = %d ndims = %d", start[0], ndims));
-    }
-    if (!mpierr)
-        if ((mpierr = MPI_Bcast(count, ndims, MPI_OFFSET, 0, ios->intercomm)))
-            return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
+    if ((mpierr = MPI_Bcast(start, ndims, MPI_OFFSET, 0, ios->intercomm)))
+        return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
+    LOG((1, "put_vars_handler getting start[0] = %d ndims = %d", start[0], ndims));
+    if ((mpierr = MPI_Bcast(count, ndims, MPI_OFFSET, 0, ios->intercomm)))
+        return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
     if ((mpierr = MPI_Bcast(&stride_present, 1, MPI_CHAR, 0, ios->intercomm)))
         return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
-    if (!mpierr && stride_present)
+    if (stride_present)
         if ((mpierr = MPI_Bcast(stride, ndims, MPI_OFFSET, 0, ios->intercomm)))
             return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
     if ((mpierr = MPI_Bcast(&xtype, 1, MPI_INT, 0, ios->intercomm)))
@@ -667,8 +719,7 @@ int put_vars_handler(iosystem_desc_t *ios)
         return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
     LOG((1, "put_vars_handler ncid = %d varid = %d ndims = %d "
          "stride_present = %d xtype = %d num_elem = %d typelen = %d",
-         ncid, varid, ndims, stride_present, xtype,
-         num_elem, typelen));
+         ncid, varid, ndims, stride_present, xtype, num_elem, typelen));
 
     for (int d = 0; d < ndims; d++)
     {
@@ -706,43 +757,38 @@ int put_vars_handler(iosystem_desc_t *ios)
         PIOc_put_vars_schar(ncid, varid, startp, countp, stridep, buf);
         break;
     case NC_CHAR:
-        PIOc_put_vars_schar(ncid, varid, startp, countp, stridep, buf);
+        PIOc_put_vars_text(ncid, varid, startp, countp, stridep, buf);
         break;
     case NC_SHORT:
         PIOc_put_vars_short(ncid, varid, startp, countp, stridep, buf);
         break;
     case NC_INT:
-        PIOc_put_vars_int(ncid, varid, startp, countp,
-                                 stridep, buf);
+        PIOc_put_vars_int(ncid, varid, startp, countp, stridep, buf);
+        break;
+    case PIO_LONG_INTERNAL:
+        PIOc_put_vars_long(ncid, varid, startp, countp, stridep, buf);
         break;
     case NC_FLOAT:
-        PIOc_put_vars_float(ncid, varid, startp, countp,
-                                   stridep, buf);
+        PIOc_put_vars_float(ncid, varid, startp, countp, stridep, buf);
         break;
     case NC_DOUBLE:
-        PIOc_put_vars_double(ncid, varid, startp, countp,
-                                    stridep, buf);
+        PIOc_put_vars_double(ncid, varid, startp, countp, stridep, buf);
         break;
 #ifdef _NETCDF4
     case NC_UBYTE:
-        PIOc_put_vars_uchar(ncid, varid, startp, countp,
-                                   stridep, buf);
+        PIOc_put_vars_uchar(ncid, varid, startp, countp, stridep, buf);
         break;
     case NC_USHORT:
-        PIOc_put_vars_ushort(ncid, varid, startp, countp,
-                                    stridep, buf);
+        PIOc_put_vars_ushort(ncid, varid, startp, countp, stridep, buf);
         break;
     case NC_UINT:
-        PIOc_put_vars_uint(ncid, varid, startp, countp,
-                                  stridep, buf);
+        PIOc_put_vars_uint(ncid, varid, startp, countp, stridep, buf);
         break;
     case NC_INT64:
-        PIOc_put_vars_longlong(ncid, varid, startp, countp,
-                                      stridep, buf);
+        PIOc_put_vars_longlong(ncid, varid, startp, countp, stridep, buf);
         break;
     case NC_UINT64:
-        PIOc_put_vars_ulonglong(ncid, varid, startp, countp,
-                                       stridep, buf);
+        PIOc_put_vars_ulonglong(ncid, varid, startp, countp, stridep, buf);
         break;
         /* case NC_STRING: */
         /*      PIOc_put_vars_string(ncid, varid, startp, countp, */
@@ -794,18 +840,14 @@ int get_vars_handler(iosystem_desc_t *ios)
     /* Now we know how big to make these arrays. */
     PIO_Offset start[ndims], count[ndims], stride[ndims];
 
-    if (!mpierr)
-    {
-        if ((mpierr = MPI_Bcast(start, ndims, MPI_OFFSET, 0, ios->intercomm)))
-            return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
-        LOG((1, "put_vars_handler getting start[0] = %d ndims = %d", start[0], ndims));
-    }
-    if (!mpierr)
-        if ((mpierr = MPI_Bcast(count, ndims, MPI_OFFSET, 0, ios->intercomm)))
-            return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
+    if ((mpierr = MPI_Bcast(start, ndims, MPI_OFFSET, 0, ios->intercomm)))
+        return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
+    LOG((1, "put_vars_handler getting start[0] = %d ndims = %d", start[0], ndims));
+    if ((mpierr = MPI_Bcast(count, ndims, MPI_OFFSET, 0, ios->intercomm)))
+        return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
     if ((mpierr = MPI_Bcast(&stride_present, 1, MPI_CHAR, 0, ios->intercomm)))
         return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
-    if (!mpierr && stride_present)
+    if (stride_present)
         if ((mpierr = MPI_Bcast(stride, ndims, MPI_OFFSET, 0, ios->intercomm)))
             return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
     if ((mpierr = MPI_Bcast(&xtype, 1, MPI_INT, 0, ios->intercomm)))
@@ -816,8 +858,7 @@ int get_vars_handler(iosystem_desc_t *ios)
         return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
     LOG((1, "get_vars_handler ncid = %d varid = %d ndims = %d "
          "stride_present = %d xtype = %d num_elem = %d typelen = %d",
-         ncid, varid, ndims, stride_present, xtype,
-         num_elem, typelen));
+         ncid, varid, ndims, stride_present, xtype, num_elem, typelen));
 
     for (int d = 0; d < ndims; d++)
     {
@@ -844,13 +885,16 @@ int get_vars_handler(iosystem_desc_t *ios)
         PIOc_get_vars_schar(ncid, varid, startp, countp, stridep, buf);
         break;
     case NC_CHAR:
-        PIOc_get_vars_schar(ncid, varid, startp, countp, stridep, buf);
+        PIOc_get_vars_text(ncid, varid, startp, countp, stridep, buf);
         break;
     case NC_SHORT:
         PIOc_get_vars_short(ncid, varid, startp, countp, stridep, buf);
         break;
     case NC_INT:
         PIOc_get_vars_int(ncid, varid, startp, countp, stridep, buf);
+        break;
+    case PIO_LONG_INTERNAL:
+        PIOc_get_vars_long(ncid, varid, startp, countp, stridep, buf);
         break;
     case NC_FLOAT:
         PIOc_get_vars_float(ncid, varid, startp, countp, stridep, buf);
@@ -1000,6 +1044,62 @@ int inq_var_chunking_handler(iosystem_desc_t *ios)
 }
 
 /**
+ * Do an inq_var_fill on a netCDF variable. This function is only
+ * run on IO tasks.
+ *
+ * @param ios pointer to the iosystem_desc_t.
+ * @returns 0 for success, error code otherwise.
+ */
+int inq_var_fill_handler(iosystem_desc_t *ios)
+{
+    int ncid;
+    int varid;
+    char fill_mode_present, fill_value_present;
+    PIO_Offset type_size;
+    int fill_mode, *fill_modep = NULL;
+    PIO_Offset *fill_value, *fill_valuep = NULL;
+    int mpierr;
+
+    assert(ios);
+    LOG((1, "inq_var_fill_handler"));
+
+    /* Get the parameters for this function that the the comp master
+     * task is broadcasting. */
+    if ((mpierr = MPI_Bcast(&ncid, 1, MPI_INT, 0, ios->intercomm)))
+        return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
+    if ((mpierr = MPI_Bcast(&varid, 1, MPI_INT, 0, ios->intercomm)))
+        return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
+    if ((mpierr = MPI_Bcast(&type_size, 1, MPI_OFFSET, 0, ios->intercomm)))
+        return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
+    if ((mpierr = MPI_Bcast(&fill_mode_present, 1, MPI_CHAR, 0, ios->intercomm)))
+        return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
+    if ((mpierr = MPI_Bcast(&fill_value_present, 1, MPI_CHAR, 0, ios->intercomm)))
+        return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
+    LOG((2,"inq_var_fill_handler ncid = %d varid = %d type_size = %lld, fill_mode_present = %d fill_value_present = %d",
+         ncid, varid, type_size, fill_mode_present, fill_value_present));
+
+    /* If we need to, alocate storage for fill value. */
+    if (fill_value_present)
+        if (!(fill_value = malloc(type_size)))
+            return pio_err(ios, NULL, PIO_ENOMEM, __FILE__, __LINE__);
+
+    /* Set the non-NULL pointers. */
+    if (fill_mode_present)
+        fill_modep = &fill_mode;
+    if (fill_value_present)
+        fill_valuep = fill_value;
+
+    /* Call the inq function to get the values. */
+    PIOc_inq_var_fill(ncid, varid, fill_modep, fill_valuep);
+
+    /* Free fill value storage if we allocated some. */
+    if (fill_value_present)
+        free(fill_value);
+
+    return PIO_NOERR;
+}
+
+/**
  * Do an inq_var_endian on a netCDF variable. This function is only
  * run on IO tasks.
  *
@@ -1128,8 +1228,7 @@ int inq_varid_handler(iosystem_desc_t *ios)
         return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
     if ((mpierr = MPI_Bcast(&namelen, 1, MPI_INT, 0, ios->intercomm)))
         return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
-    pioassert(namelen <= PIO_MAX_NAME, "namelen > PIO_MAX_NAME", __FILE__, __LINE__);
-    if ((mpierr = MPI_Bcast((void *)name, namelen + 1, MPI_CHAR, 0, ios->intercomm)))
+    if ((mpierr = MPI_Bcast(name, namelen + 1, MPI_CHAR, 0, ios->intercomm)))
         return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
 
     /* Call the inq_dimid function. */
@@ -1228,9 +1327,7 @@ int def_var_handler(iosystem_desc_t *ios)
         return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
     if ((mpierr = MPI_Bcast(&namelen, 1, MPI_INT, 0, ios->intercomm)))
         return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
-    pioassert(namelen <= PIO_MAX_NAME, "namelen > PIO_MAX_NAME", __FILE__, __LINE__);
-    if ((mpierr = MPI_Bcast((void *)name, namelen + 1, MPI_CHAR, 0,
-                            ios->intercomm)))
+    if ((mpierr = MPI_Bcast(name, namelen + 1, MPI_CHAR, 0, ios->intercomm)))
         return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
     if ((mpierr = MPI_Bcast(&xtype, 1, MPI_INT, 0, ios->intercomm)))
         return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
@@ -1308,6 +1405,62 @@ int def_var_chunking_handler(iosystem_desc_t *ios)
         return pio_err(ios, NULL, ret, __FILE__, __LINE__);
 
     LOG((1, "def_var_chunking_handler succeeded!"));
+    return PIO_NOERR;
+}
+
+/**
+ * This function is run on the IO tasks to define fill mode and fill
+ * value.
+ *
+ * @param ios pointer to the iosystem_desc_t.
+ * @returns 0 for success, error code otherwise.
+ */
+int def_var_fill_handler(iosystem_desc_t *ios)
+{
+    int ncid;
+    int varid;
+    int fill_mode;
+    char fill_value_present;
+    PIO_Offset type_size;
+    PIO_Offset *fill_valuep = NULL;
+    int mpierr;
+
+    assert(ios);
+    LOG((1, "def_var_fill_handler comproot = %d", ios->comproot));
+
+    /* Get the parameters for this function that the he comp master
+     * task is broadcasting. */
+    if ((mpierr = MPI_Bcast(&ncid, 1, MPI_INT, 0, ios->intercomm)))
+        return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
+    if ((mpierr = MPI_Bcast(&varid, 1, MPI_INT, 0, ios->intercomm)))
+        return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
+    if ((mpierr = MPI_Bcast(&fill_mode, 1, MPI_INT, 0, ios->intercomm)))
+        return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
+    if ((mpierr = MPI_Bcast(&type_size, 1, MPI_OFFSET, 0, ios->intercomm)))
+        return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
+    if ((mpierr = MPI_Bcast(&fill_value_present, 1, MPI_CHAR, 0, ios->intercomm)))
+        return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
+    if (fill_value_present)
+    {
+        if (!(fill_valuep = malloc(type_size)))
+            return pio_err(ios, NULL, PIO_ENOMEM, __FILE__, __LINE__);
+        if ((mpierr = MPI_Bcast(fill_valuep, type_size, MPI_CHAR, 0, ios->intercomm)))
+        {
+            free(fill_valuep);
+            return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
+        }
+    }
+    LOG((1, "def_var_fill_handler got parameters ncid = %d varid = %d fill_mode = %d "
+         "type_size = %lld fill_value_present = %d", ncid, varid, fill_mode, type_size, fill_value_present));
+
+    /* Call the function. */
+    PIOc_def_var_fill(ncid, varid, fill_mode, fill_valuep);
+
+    /* Free memory allocated for the fill value. */
+    if (fill_valuep)
+        free(fill_valuep);
+
+    LOG((1, "def_var_fill_handler succeeded!"));
     return PIO_NOERR;
 }
 
@@ -1460,9 +1613,7 @@ int def_dim_handler(iosystem_desc_t *ios)
         return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
     if ((mpierr = MPI_Bcast(&namelen, 1, MPI_INT, 0, ios->intercomm)))
         return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
-    pioassert(namelen <= PIO_MAX_NAME, "namelen > PIO_MAX_NAME", __FILE__, __LINE__);
-    if ((mpierr = MPI_Bcast((void *)name, namelen + 1, MPI_CHAR, 0,
-                            ios->intercomm)))
+    if ((mpierr = MPI_Bcast(name, namelen + 1, MPI_CHAR, 0, ios->intercomm)))
         return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
     if ((mpierr = MPI_Bcast(&len, 1, MPI_INT, 0, ios->intercomm)))
         return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
@@ -1505,8 +1656,7 @@ int rename_dim_handler(iosystem_desc_t *ios)
         return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
     if ((mpierr = MPI_Bcast(&namelen, 1, MPI_INT, 0, ios->intercomm)))
         return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
-    pioassert(namelen <= PIO_MAX_NAME, "namelen > PIO_MAX_NAME", __FILE__, __LINE__);
-    if ((mpierr = MPI_Bcast((void *)name, namelen + 1, MPI_CHAR, 0, ios->intercomm)))
+    if ((mpierr = MPI_Bcast(name, namelen + 1, MPI_CHAR, 0, ios->intercomm)))
         return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
     LOG((2, "rename_dim_handler got parameters namelen = %d "
          "name = %s ncid = %d dimid = %d", namelen, name, ncid, dimid));
@@ -1547,8 +1697,7 @@ int rename_var_handler(iosystem_desc_t *ios)
         return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
     if ((mpierr = MPI_Bcast(&namelen, 1, MPI_INT, 0, ios->intercomm)))
         return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
-    pioassert(namelen <= PIO_MAX_NAME, "namelen > PIO_MAX_NAME", __FILE__, __LINE__);
-    if ((mpierr = MPI_Bcast((void *)name, namelen + 1, MPI_CHAR, 0, ios->intercomm)))
+    if ((mpierr = MPI_Bcast(name, namelen + 1, MPI_CHAR, 0, ios->intercomm)))
         return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
     LOG((2, "rename_var_handler got parameters namelen = %d "
          "name = %s ncid = %d varid = %d", namelen, name, ncid, varid));
@@ -1589,12 +1738,10 @@ int rename_att_handler(iosystem_desc_t *ios)
         return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
     if ((mpierr = MPI_Bcast(&namelen, 1, MPI_INT, 0, ios->intercomm)))
         return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
-    pioassert(namelen <= PIO_MAX_NAME, "namelen > PIO_MAX_NAME", __FILE__, __LINE__);
     if ((mpierr = MPI_Bcast(name, namelen + 1, MPI_CHAR, 0, ios->intercomm)))
         return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
     if ((mpierr = MPI_Bcast(&newnamelen, 1, MPI_INT, 0, ios->intercomm)))
         return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
-    pioassert(newnamelen <= PIO_MAX_NAME, "newnamelen > PIO_MAX_NAME", __FILE__, __LINE__);
     if ((mpierr = MPI_Bcast(newname, newnamelen + 1, MPI_CHAR, 0, ios->intercomm)))
         return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
     LOG((2, "rename_att_handler got parameters namelen = %d name = %s ncid = %d varid = %d "
@@ -1636,7 +1783,6 @@ int delete_att_handler(iosystem_desc_t *ios)
         return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
     if ((mpierr = MPI_Bcast(&namelen, 1, MPI_INT, 0, ios->intercomm)))
         return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
-    pioassert(namelen <= PIO_MAX_NAME, "namelen > PIO_MAX_NAME", __FILE__, __LINE__);
     if ((mpierr = MPI_Bcast(name, namelen + 1, MPI_CHAR, 0, ios->intercomm)))
         return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
     LOG((2, "delete_att_handler namelen = %d name = %s ncid = %d varid = %d ",
@@ -1663,10 +1809,8 @@ int open_file_handler(iosystem_desc_t *ios)
     int ncid;
     int len;
     int iotype;
-    char filename[PIO_MAX_NAME + 1];
     int mode;
     int mpierr;
-    int ret;
 
     LOG((1, "open_file_handler comproot = %d", ios->comproot));
     assert(ios);
@@ -1676,22 +1820,24 @@ int open_file_handler(iosystem_desc_t *ios)
     if ((mpierr = MPI_Bcast(&len, 1, MPI_INT, 0, ios->intercomm)))
         return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
     LOG((2, "open_file_handler got parameter len = %d", len));
-    pioassert(len <= PIO_MAX_NAME, "len > PIO_MAX_NAME", __FILE__, __LINE__);
-    if ((mpierr = MPI_Bcast((void *)filename, len + 1, MPI_CHAR, 0,
-                            ios->intercomm)))
+
+    /* Get space for the filename. */
+    char filename[len + 1];
+
+    if ((mpierr = MPI_Bcast(filename, len + 1, MPI_CHAR, 0, ios->intercomm)))
         return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
     if ((mpierr = MPI_Bcast(&iotype, 1, MPI_INT, 0, ios->intercomm)))
         return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
     if ((mpierr = MPI_Bcast(&mode, 1, MPI_INT, 0, ios->intercomm)))
         return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
+
     LOG((2, "open_file_handler got parameters len = %d filename = %s iotype = %d mode = %d",
          len, filename, iotype, mode));
 
-    /* Call the open file function. */
-    if ((ret = PIOc_openfile(ios->iosysid, &ncid, &iotype, filename, mode)))
-        return pio_err(ios, NULL, ret, __FILE__, __LINE__);
+    /* Call the open file function. Errors are handling within
+     * function, so return code can be ignored. */
+    PIOc_openfile(ios->iosysid, &ncid, &iotype, filename, mode);
 
-    LOG((1, "open_file_handler succeeded!"));
     return PIO_NOERR;
 }
 
@@ -1706,7 +1852,6 @@ int open_file_handler(iosystem_desc_t *ios)
 int delete_file_handler(iosystem_desc_t *ios)
 {
     int len;
-    char filename[PIO_MAX_NAME + 1];
     int mpierr;
     int ret;
 
@@ -1717,9 +1862,11 @@ int delete_file_handler(iosystem_desc_t *ios)
      * task is broadcasting. */
     if ((mpierr = MPI_Bcast(&len, 1, MPI_INT, 0, ios->intercomm)))
         return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
-    LOG((2, "len = %d", len));
-    pioassert(len <= PIO_MAX_NAME, "len > PIO_MAX_NAME", __FILE__, __LINE__);
-    if ((mpierr = MPI_Bcast((void *)filename, len + 1, MPI_CHAR, 0, ios->intercomm)))
+
+    /* Get space for the filename. */
+    char filename[len + 1];
+
+    if ((mpierr = MPI_Bcast(filename, len + 1, MPI_CHAR, 0, ios->intercomm)))
         return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
     LOG((1, "delete_file_handler got parameters len = %d filename = %s",
          len, filename));
@@ -1732,18 +1879,94 @@ int delete_file_handler(iosystem_desc_t *ios)
     return PIO_NOERR;
 }
 
-/** This function is run on the IO tasks to...
- * NOTE: not yet implemented
+/** 
+ * This function is run on the IO tasks to initialize a decomposition.
  *
  * @param ios pointer to the iosystem_desc_t data.
- *
  * @returns 0 for success, PIO_EIO for MPI Bcast errors, or error code
  * from netCDF base function.
- * @internal
  */
 int initdecomp_dof_handler(iosystem_desc_t *ios)
 {
+    int iosysid;
+    int pio_type;
+    int ndims;
+    int maplen;
+    int ioid;
+    char rearranger_present;
+    int rearranger;
+    int *rearrangerp = NULL;
+    char iostart_present;
+    PIO_Offset *iostartp = NULL;
+    char iocount_present;
+    PIO_Offset *iocountp = NULL;
+    int mpierr = MPI_SUCCESS;  /* Return code from MPI function codes. */
+    int ret; /* Return code. */
+
+    LOG((1, "initdecomp_dof_handler called"));
     assert(ios);
+
+    /* Get the parameters for this function that the the comp master
+     * task is broadcasting. */
+    if ((mpierr = MPI_Bcast(&iosysid, 1, MPI_INT, 0, ios->intercomm)))
+        return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
+    if ((mpierr = MPI_Bcast(&pio_type, 1, MPI_INT, 0, ios->intercomm)))
+        return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
+    if ((mpierr = MPI_Bcast(&ndims, 1, MPI_INT, 0, ios->intercomm)))
+        return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
+
+    /* Now we know the size of these arrays. */
+    int dims[ndims];
+    PIO_Offset iostart[ndims];
+    PIO_Offset iocount[ndims];
+
+    if ((mpierr = MPI_Bcast(dims, ndims, MPI_INT, 0, ios->intercomm)))
+        return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
+    if ((mpierr = MPI_Bcast(&maplen, 1, MPI_INT, 0, ios->intercomm)))
+        return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
+
+    PIO_Offset compmap[maplen];
+
+    if ((mpierr = MPI_Bcast(compmap, maplen, MPI_OFFSET, 0, ios->intercomm)))
+        return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
+
+    if ((mpierr = MPI_Bcast(&rearranger_present, 1, MPI_CHAR, 0, ios->intercomm)))
+        return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
+
+    if (rearranger_present)
+        if ((mpierr = MPI_Bcast(&rearranger, 1, MPI_INT, 0, ios->intercomm)))
+            return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
+
+    if ((mpierr = MPI_Bcast(&iostart_present, 1, MPI_CHAR, 0, ios->intercomm)))
+        return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
+
+    if (iostart_present)
+        if ((mpierr = MPI_Bcast(iostart, ndims, MPI_OFFSET, 0, ios->intercomm)))
+            return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
+
+    if ((mpierr = MPI_Bcast(&iocount_present, 1, MPI_CHAR, 0, ios->intercomm)))
+        return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
+
+    if (iocount_present)
+        if ((mpierr = MPI_Bcast(iocount, ndims, MPI_OFFSET, 0, ios->intercomm)))
+            return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
+
+    LOG((2, "initdecomp_dof_handler iosysid = %d pio_type = %d ndims = %d maplen = %d "
+         "rearranger_present = %d iostart_present = %d iocount_present = %d ",
+         iosysid, pio_type, ndims, maplen, rearranger_present, iostart_present, iocount_present));
+
+    if (rearranger_present)
+        rearrangerp = &rearranger;
+    if (iostart_present)
+        iostartp = iostart;
+    if (iocount_present)
+        iocountp = iocount;
+
+    /* Call the function. */
+    ret = PIOc_InitDecomp(iosysid, pio_type, ndims, dims, maplen, compmap, &ioid, rearrangerp,
+                          iostartp, iocountp);
+    
+    LOG((1, "PIOc_InitDecomp returned %d", ret));
     return PIO_NOERR;
 }
 
@@ -1972,16 +2195,33 @@ int get_var_chunk_cache_handler(iosystem_desc_t *ios)
 }
 
 /** This function is run on the IO tasks to free the decomp hanlder.
- * NOTE: not yet implemented
  *
  * @param ios pointer to the iosystem_desc_t data.
- *
  * @returns 0 for success, PIO_EIO for MPI Bcast errors, or error code
  * from netCDF base function.
- * @internal
  */
 int freedecomp_handler(iosystem_desc_t *ios)
 {
+    int iosysid;
+    int ioid;
+    int mpierr = MPI_SUCCESS;  /* Return code from MPI function codes. */
+    int ret; /* Return code. */
+
+    LOG((1, "freedecomp_handler called"));
+    assert(ios);
+
+    /* Get the parameters for this function that the the comp master
+     * task is broadcasting. */
+    if ((mpierr = MPI_Bcast(&iosysid, 1, MPI_INT, 0, ios->intercomm)))
+        return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
+    if ((mpierr = MPI_Bcast(&ioid, 1, MPI_INT, 0, ios->intercomm)))
+        return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
+    LOG((2, "freedecomp_handler iosysid = %d ioid = %d", iosysid, ioid));
+
+    /* Call the function. */
+    ret = PIOc_freedecomp(iosysid, ioid);
+    
+    LOG((1, "PIOc_freedecomp returned %d", ret));
     return PIO_NOERR;
 }
 
@@ -2145,6 +2385,9 @@ int pio_msg_handler2(int io_rank, int component_count, iosystem_desc_t **iosys,
         case PIO_MSG_DEF_VAR_CHUNKING:
             def_var_chunking_handler(my_iosys);
             break;
+        case PIO_MSG_DEF_VAR_FILL:
+            def_var_fill_handler(my_iosys);
+            break;
         case PIO_MSG_DEF_VAR_ENDIAN:
             def_var_endian_handler(my_iosys);
             break;
@@ -2174,6 +2417,9 @@ int pio_msg_handler2(int io_rank, int component_count, iosystem_desc_t **iosys,
             break;
         case PIO_MSG_INQ_VAR_CHUNKING:
             inq_var_chunking_handler(my_iosys);
+            break;
+        case PIO_MSG_INQ_VAR_FILL:
+            inq_var_fill_handler(my_iosys);
             break;
         case PIO_MSG_INQ_VAR_DEFLATE:
             inq_var_deflate_handler(my_iosys);
@@ -2223,6 +2469,9 @@ int pio_msg_handler2(int io_rank, int component_count, iosystem_desc_t **iosys,
         case PIO_MSG_FREEDECOMP:
             freedecomp_handler(my_iosys);
             break;
+        case PIO_MSG_SET_FILL:
+            set_fill_handler(my_iosys);
+            break;
         case PIO_MSG_EXIT:
             finalize_handler(my_iosys, index);
             msg = -1;
@@ -2232,15 +2481,11 @@ int pio_msg_handler2(int io_rank, int component_count, iosystem_desc_t **iosys,
             return PIO_EINVAL;
         }
 
-        /* If an error was returned by the handler, do something! */
+        /* If an error was returned by the handler, do nothing! */
         LOG((3, "pio_msg_handler2 checking error ret = %d", ret));
-        if (ret)
-            MPI_Finalize();
 
-        LOG((3, "pio_msg_handler2 getting ready to listen"));
-
-        /* Unless finalize was called, listen for another msg from the
-         * component whose message we just handled. */
+        /* Listen for another msg from the component whose message we
+         * just handled. */
         if (!io_rank && msg != -1)
         {
             my_iosys = iosys[index];

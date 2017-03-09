@@ -29,13 +29,18 @@
 /* Run simple async test. */
 int main(int argc, char **argv)
 {
+#define NUM_IO_PROCS 1
+#define NUM_COMP_PROCS 1
     int my_rank; /* Zero-based rank of processor. */
     int ntasks; /* Number of processors involved in current execution. */
     int iosysid[COMPONENT_COUNT]; /* The ID for the parallel I/O system. */
     int num_flavors; /* Number of PIO netCDF flavors in this build. */
     int flavor[NUM_FLAVORS]; /* iotypes for the supported netCDF IO flavors. */
     int ret; /* Return code. */
-    int num_procs[COMPONENT_COUNT + 1] = {1, 1}; /* Num procs for IO and computation. */
+    int num_procs[COMPONENT_COUNT] = {1}; /* Num procs for IO and computation. */
+    int io_proc_list[NUM_IO_PROCS] = {0};
+    int comp_proc_list[NUM_COMP_PROCS] = {1};
+    int *proc_list[COMPONENT_COUNT] = {comp_proc_list};
     MPI_Comm test_comm;
 
     /* Initialize test. */
@@ -54,19 +59,19 @@ int main(int argc, char **argv)
         int comp_task = my_rank < NUM_IO_PROCS ? 0 : 1;
 
         /* Check for invalid values. */
-        if (PIOc_Init_Async(test_comm, NUM_IO_PROCS, NULL, COMPONENT_COUNT,
+        if (PIOc_init_async(test_comm, NUM_IO_PROCS, NULL, COMPONENT_COUNT,
                             num_procs, NULL, NULL, NULL, NULL) != PIO_EINVAL)
             ERR(ERR_WRONG);
-        if (PIOc_Init_Async(test_comm, NUM_IO_PROCS, NULL, -1,
+        if (PIOc_init_async(test_comm, NUM_IO_PROCS, NULL, -1,
                             num_procs, NULL, NULL, NULL, iosysid) != PIO_EINVAL)
             ERR(ERR_WRONG);
-        if (PIOc_Init_Async(test_comm, NUM_IO_PROCS, NULL, COMPONENT_COUNT,
+        if (PIOc_init_async(test_comm, NUM_IO_PROCS, NULL, COMPONENT_COUNT,
                             NULL, NULL, NULL, NULL, iosysid) != PIO_EINVAL)
             ERR(ERR_WRONG);
 
         /* Initialize the IO system. */
-        if ((ret = PIOc_Init_Async(test_comm, NUM_IO_PROCS, NULL, COMPONENT_COUNT,
-                                   num_procs, NULL, NULL, NULL, iosysid)))
+        if ((ret = PIOc_init_async(test_comm, NUM_IO_PROCS, io_proc_list, COMPONENT_COUNT,
+                                   num_procs, (int **)proc_list, NULL, NULL, iosysid)))
             ERR(ERR_INIT);
 
         /* All the netCDF calls are only executed on the computation

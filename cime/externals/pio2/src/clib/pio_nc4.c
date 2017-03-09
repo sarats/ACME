@@ -302,20 +302,20 @@ int PIOc_def_var_chunking(int ncid, int varid, int storage, const PIO_Offset *ch
     {
 #ifdef _NETCDF4
         if (file->do_io)
-	{
-	    size_t chunksizes_sizet[ndims];
-	    for (int d = 0; d < ndims; d++)
-	    {
-		if (chunksizesp[d] < 0)
-		{
-		    ierr = PIO_ERANGE;
-		    break;
-		}
-		chunksizes_sizet[d] = chunksizesp[d];
-	    }
-	    if (!ierr)
-		ierr = nc_def_var_chunking(file->fh, varid, storage, chunksizes_sizet);
-	}
+        {
+            size_t chunksizes_sizet[ndims];
+            for (int d = 0; d < ndims; d++)
+            {
+                if (chunksizesp[d] < 0)
+                {
+                    ierr = PIO_ERANGE;
+                    break;
+                }
+                chunksizes_sizet[d] = chunksizesp[d];
+            }
+            if (!ierr)
+                ierr = nc_def_var_chunking(file->fh, varid, storage, chunksizes_sizet);
+        }
 #endif
     }
 
@@ -400,7 +400,6 @@ int PIOc_inq_var_chunking(int ncid, int varid, int *storagep, PIO_Offset *chunks
                 mpierr = MPI_Bcast(&chunksizes_present, 1, MPI_CHAR, ios->compmaster, ios->intercomm);
             LOG((2, "PIOc_inq_var_chunking ncid = %d varid = %d storage_present = %d chunksizes_present = %d",
                  ncid, varid, storage_present, chunksizes_present));
-
         }
 
         /* Handle MPI errors. */
@@ -419,20 +418,20 @@ int PIOc_inq_var_chunking(int ncid, int varid, int *storagep, PIO_Offset *chunks
     {
 #ifdef _NETCDF4
         if (file->do_io)
-	{
-	    size_t chunksizes_sizet[ndims];
-	    ierr = nc_inq_var_chunking(file->fh, varid, storagep, chunksizes_sizet);
-	    if (!ierr && chunksizesp)
-		for (int d = 0; d < ndims; d++)
-		{
-		    if (chunksizes_sizet[d] > NC_MAX_INT64)
-		    {
-			ierr = PIO_ERANGE;
-			break;
-		    }
-		    chunksizesp[d] = chunksizes_sizet[d];
-		}
-	}
+        {
+            size_t chunksizes_sizet[ndims];
+            ierr = nc_inq_var_chunking(file->fh, varid, storagep, chunksizes_sizet);
+            if (!ierr && chunksizesp)
+                for (int d = 0; d < ndims; d++)
+                {
+                    if (chunksizes_sizet[d] > NC_MAX_INT64)
+                    {
+                        ierr = PIO_ERANGE;
+                        break;
+                    }
+                    chunksizesp[d] = chunksizes_sizet[d];
+                }
+        }
 #endif
         LOG((2, "ierr = %d", ierr));
     }
@@ -452,83 +451,6 @@ int PIOc_inq_var_chunking(int ncid, int varid, int *storagep, PIO_Offset *chunks
     if (chunksizesp)
         if ((mpierr = MPI_Bcast(chunksizesp, ndims, MPI_OFFSET, ios->ioroot, ios->my_comm)))
             return check_mpi(file, mpierr, __FILE__, __LINE__);
-
-    return PIO_NOERR;
-}
-
-/**
- * @ingroup PIO_def_var
- * Set chunksizes for a variable.
- *
- * This function only applies to netCDF-4 files. When used with netCDF
- * classic files, the error PIO_ENOTNC4 will be returned.
- *
- * See the <a
- * href="http://www.unidata.ucar.edu/software/netcdf/docs/group__variables.html">netCDF
- * variable documentation</a> for details about the operation of this
- * function.
- *
- * Chunksizes have important performance repercussions. NetCDF
- * attempts to choose sensible chunk sizes by default, but for best
- * performance check chunking against access patterns.
- *
- * @param ncid the ncid of the open file.
- * @param varid the ID of the variable to set chunksizes for.
- * @param storage NC_CONTIGUOUS or NC_CHUNKED.
- * @param chunksizep an array of chunksizes. Must have a chunksize for
- * every variable dimension.
- * @return PIO_NOERR for success, otherwise an error code.
- */
-int PIOc_def_var_fill(int ncid, int varid, int no_fill, const void *fill_value)
-{
-    iosystem_desc_t *ios;  /* Pointer to io system information. */
-    file_desc_t *file;     /* Pointer to file information. */
-    int ierr;              /* Return code from function calls. */
-    int mpierr = MPI_SUCCESS, mpierr2;  /* Return code from MPI function codes. */
-
-    /* Get the file info. */
-    if ((ierr = pio_get_file(ncid, &file)))
-        return pio_err(NULL, NULL, ierr, __FILE__, __LINE__);
-    ios = file->iosystem;
-
-    /* Only netCDF-4 files can use this feature. */
-    if (file->iotype != PIO_IOTYPE_NETCDF4P && file->iotype != PIO_IOTYPE_NETCDF4C)
-        return pio_err(ios, file, PIO_ENOTNC4, __FILE__, __LINE__);
-
-    /* If async is in use, and this is not an IO task, bcast the parameters. */
-    if (ios->async_interface)
-    {
-        if (!ios->ioproc)
-        {
-            int msg = PIO_MSG_SET_FILL;
-
-            if (ios->compmaster == MPI_ROOT)
-                mpierr = MPI_Send(&msg, 1,MPI_INT, ios->ioroot, 1, ios->union_comm);
-
-            if (!mpierr)
-                mpierr = MPI_Bcast(&ncid, 1, MPI_INT, ios->compmaster, ios->intercomm);
-        }
-
-        /* Handle MPI errors. */
-        if ((mpierr2 = MPI_Bcast(&mpierr, 1, MPI_INT, ios->comproot, ios->my_comm)))
-            return check_mpi(file, mpierr2, __FILE__, __LINE__);
-        if (mpierr)
-            return check_mpi(file, mpierr, __FILE__, __LINE__);
-    }
-
-    if (ios->ioproc)
-    {
-#ifdef _NETCDF4
-        if (file->do_io)
-            ierr = nc_def_var_fill(file->fh, varid, no_fill, fill_value);
-#endif
-    }
-
-    /* Broadcast and check the return code. */
-    if ((mpierr = MPI_Bcast(&ierr, 1, MPI_INT, ios->ioroot, ios->my_comm)))
-        return check_mpi(file, mpierr, __FILE__, __LINE__);
-    if (ierr)
-        return check_netcdf(file, ierr, __FILE__, __LINE__);
 
     return PIO_NOERR;
 }
@@ -868,9 +790,9 @@ int PIOc_get_chunk_cache(int iosysid, int iotype, PIO_Offset *sizep, PIO_Offset 
 
         /* Handle MPI errors. */
         if ((mpierr2 = MPI_Bcast(&mpierr, 1, MPI_INT, ios->comproot, ios->my_comm)))
-            return check_mpi(NULL, mpierr2, __FILE__, __LINE__);
+            return check_mpi2(ios, NULL, mpierr2, __FILE__, __LINE__);
         if (mpierr)
-            return check_mpi(NULL, mpierr, __FILE__, __LINE__);
+            return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
     }
 
     /* If this is an IO task, then call the netCDF function. */
@@ -888,7 +810,7 @@ int PIOc_get_chunk_cache(int iosysid, int iotype, PIO_Offset *sizep, PIO_Offset 
 
     /* Broadcast and check the return code. */
     if ((mpierr = MPI_Bcast(&ierr, 1, MPI_INT, ios->ioroot, ios->my_comm)))
-        return check_mpi(NULL, mpierr, __FILE__, __LINE__);
+        return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
     LOG((2, "bcast complete ierr = %d sizep = %d", ierr, sizep));
     if (ierr)
         return check_netcdf(NULL, ierr, __FILE__, __LINE__);
@@ -897,19 +819,19 @@ int PIOc_get_chunk_cache(int iosysid, int iotype, PIO_Offset *sizep, PIO_Offset 
     {
         LOG((2, "bcasting size = %d ios->ioroot = %d", *sizep, ios->ioroot));
         if ((mpierr = MPI_Bcast(sizep, 1, MPI_OFFSET, ios->ioroot, ios->my_comm)))
-            return check_mpi(NULL, mpierr, __FILE__, __LINE__);
+            return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
         LOG((2, "bcast size = %d", *sizep));
     }
     if (nelemsp)
     {
         if ((mpierr = MPI_Bcast(nelemsp, 1, MPI_OFFSET, ios->ioroot, ios->my_comm)))
-            return check_mpi(NULL, mpierr, __FILE__, __LINE__);
+            return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
         LOG((2, "bcast complete nelems = %d", *nelemsp));
     }
     if (preemptionp)
     {
         if ((mpierr = MPI_Bcast(preemptionp, 1, MPI_FLOAT, ios->ioroot, ios->my_comm)))
-            return check_mpi(NULL, mpierr, __FILE__, __LINE__);
+            return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
         LOG((2, "bcast complete preemption = %d", *preemptionp));
     }
 
@@ -1073,9 +995,9 @@ int PIOc_get_var_chunk_cache(int ncid, int varid, PIO_Offset *sizep, PIO_Offset 
 
         /* Handle MPI errors. */
         if ((mpierr2 = MPI_Bcast(&mpierr, 1, MPI_INT, ios->comproot, ios->my_comm)))
-            return check_mpi(NULL, mpierr2, __FILE__, __LINE__);
+            return check_mpi2(ios, NULL, mpierr2, __FILE__, __LINE__);
         if (mpierr)
-            return check_mpi(NULL, mpierr, __FILE__, __LINE__);
+            return check_mpi2(ios, NULL, mpierr, __FILE__, __LINE__);
     }
 
     /* If this is an IO task, then call the netCDF function. */
