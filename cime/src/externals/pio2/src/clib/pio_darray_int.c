@@ -105,7 +105,7 @@ int pio_write_darray_multi_nc(file_desc_t *file, int nvars, const int *vid, int 
                               const int *frame)
 {
     iosystem_desc_t *ios;  /* Pointer to io system information. */
-    var_desc_t *vdesc;     /* Pointer to var info struct. */
+    var_desc_t *vdesc = NULL;     /* Pointer to var info struct. */
     int fndims;            /* Number of dims for this var in the file. */
     int dsize;             /* Data size (for one region). */
     int tsize;             /* Size of MPI type. */
@@ -129,7 +129,7 @@ int pio_write_darray_multi_nc(file_desc_t *file, int nvars, const int *vid, int 
     ios = file->iosystem;
 
     /* Point to var description scruct for first var. */
-    vdesc = file->varlist + vid[0];
+    /* vdesc = file->varlist + vid[0]; */
 
     /* If async is in use, send message to IO master task. */
     if (ios->async)
@@ -152,8 +152,15 @@ int pio_write_darray_multi_nc(file_desc_t *file, int nvars, const int *vid, int 
     }
 
     /* Find out how many dims this variable has. */
-    if ((ierr = PIOc_inq_varndims(file->pio_ncid, vid[0], &fndims)))
-        return pio_err(ios, file, ierr, __FILE__, __LINE__);
+    fndims = 0;
+    for (int i=0; i<nvars; i++)
+    {
+        int vfndims = 0;
+        if ((ierr = PIOc_inq_varndims(file->pio_ncid, vid[i], &vfndims)))
+            return pio_err(ios, file, ierr, __FILE__, __LINE__);
+        if (vfndims > fndims)
+            fndims = vfndims;
+    }
 
     /* Find out the size of the MPI type. */
     if ((mpierr = MPI_Type_size(basetype, &tsize)))
@@ -171,9 +178,15 @@ int pio_write_darray_multi_nc(file_desc_t *file, int nvars, const int *vid, int 
         int ndims = iodesc_ndims;
         PIO_Offset *startlist[maxregions]; /* Array of start arrays for ncmpi_iput_varn(). */
         PIO_Offset *countlist[maxregions]; /* Array of count  arrays for ncmpi_iput_varn(). */
+        assert(ndims <= fndims);
 
         LOG((3, "maxregions = %d", maxregions));
 
+        for(int regioncnt = 0; regioncnt < maxregions; regioncnt++)
+        {
+            startlist[regioncnt] = NULL;
+            countlist[regioncnt] = NULL;
+        }
         /* Process each region of data to be written. */
         for (int regioncnt = 0; regioncnt < maxregions; regioncnt++)
         {
@@ -186,18 +199,15 @@ int pio_write_darray_multi_nc(file_desc_t *file, int nvars, const int *vid, int 
 
             if (region)
             {
+                /*
                 if (vdesc->record >= 0)
                 {
-                    /* This is a record based multidimensional
-                     * array. Figure out start/count for all but the
-                     * record dimension (dimid 0). */
                     for (int i = fndims - ndims; i < fndims; i++)
                     {
                         start[i] = region->start[i - (fndims - ndims)];
                         count[i] = region->count[i - (fndims - ndims)];
                     }
 
-                    /* Now figure out start/count for record dimension. */
                     if (fndims > 1 && ndims < fndims && count[1] > 0)
                     {
                         count[0] = 1;
@@ -205,18 +215,22 @@ int pio_write_darray_multi_nc(file_desc_t *file, int nvars, const int *vid, int 
                     }
                     else if (fndims == ndims)
                     {
-                        /* ??? */
                         start[0] += vdesc->record;
                     }
                 }
                 else
                 {
-                    /* This is a non record variable. */
                     for (int i = 0; i < ndims; i++)
                     {
                         start[i] = region->start[i];
                         count[i] = region->count[i];
                     }
+                }
+                */
+                for(int i = fndims - ndims; i < fndims; i++)
+                {
+                    start[i] = region->start[i - (fndims - ndims)];
+                    count[i] = region->count[i - (fndims - ndims)];
                 }
 #if PIO_ENABLE_LOGGING
                 /* Log arrays for debug purposes. */
@@ -233,10 +247,35 @@ int pio_write_darray_multi_nc(file_desc_t *file, int nvars, const int *vid, int 
                 /* For each variable to be written. */
                 for (int nv = 0; nv < nvars; nv++)
                 {
+                    size_t *pstart, *pcount;
+                    vdesc = file->varlist + vid[nv];
                     /* Set the start of the record dimension. (Hasn't
                      * this already been set above ???) */
+                    /*
                     if (vdesc->record >= 0 && ndims < fndims)
                         start[0] = frame[nv];
+                    */
+                    if (vdesc->record >= 0)
+                    {
+                        size_t first_vdim = 0;
+                        if (ndims < fndims)
+                        {
+                            start[first_vdim] = frame[nv];
+                            count[first_vdim] = 1;
+                        }
+                        else
+                            start[first_vdim] += vdesc->record;
+                        pstart = &(start[first_vdim]);
+                        pcount = &(count[first_vdim]);
+                    }
+                    else
+                    {
+                        size_t first_vdim = 0;
+                        if (ndims < fndims)
+                            first_vdim = fndims - ndims;
+                        pstart = &(start[first_vdim]);
+                        pcount = &(count[first_vdim]);
+                    }
 
                     /* If there is data for this region, get a pointer to it. */
                     if (region)
@@ -247,7 +286,7 @@ int pio_write_darray_multi_nc(file_desc_t *file, int nvars, const int *vid, int 
 
                     /* Write the data for this variable. */
                     if (!ierr)
-                        ierr = nc_put_vara(file->fh, vid[nv], (size_t *)start, (size_t *)count, bufptr);
+                        ierr = nc_put_vara(file->fh, vid[nv], pstart, pcount, bufptr);
                 }
                 break;
 #endif
@@ -256,7 +295,11 @@ int pio_write_darray_multi_nc(file_desc_t *file, int nvars, const int *vid, int 
                 /* Get the total number of data elements we are
                  * writing for this region. */
                 dsize = 1;
+                /*
                 for (int i = 0; i < fndims; i++)
+                    dsize *= count[i];
+                */
+                for (int i = fndims - ndims; i < fndims; i++)
                     dsize *= count[i];
                 LOG((3, "dsize = %d", dsize));
 
@@ -272,7 +315,16 @@ int pio_write_darray_multi_nc(file_desc_t *file, int nvars, const int *vid, int 
                         return pio_err(ios, file, PIO_ENOMEM, __FILE__, __LINE__);
 
                     /* Copy the start/count arrays for this region. */
+                    /*
                     for (int i = 0; i < fndims; i++)
+                    {
+                        startlist[rrcnt][i] = start[i];
+                        countlist[rrcnt][i] = count[i];
+                        LOG((3, "startlist[%d][%d] = %d countlist[%d][%d] = %d", rrcnt, i,
+                             startlist[rrcnt][i], rrcnt, i, countlist[rrcnt][i]));
+                    }
+                    */
+                    for (int i = fndims - ndims; i < fndims; i++)
                     {
                         startlist[rrcnt][i] = start[i];
                         countlist[rrcnt][i] = count[i];
@@ -293,9 +345,44 @@ int pio_write_darray_multi_nc(file_desc_t *file, int nvars, const int *vid, int 
 
                         /* If this is a record var, set the start for
                          * the record dimension. */
+                        /*
                         if (vdesc->record >= 0 && ndims < fndims)
                             for (int rc = 0; rc < rrcnt; rc++)
                                 startlist[rc][0] = frame[nv];
+                        */
+                        if (vdesc->record >= 0)
+                        {
+                            size_t first_vdim = 0;
+                            if (ndims < fndims)
+                            {
+                                for (int rc = 0; rc < rrcnt; rc++)
+                                {
+                                    startlist[rc][first_vdim] = frame[nv];
+                                    countlist[rc][first_vdim] = 1;
+                                }
+                            }
+                            else
+                            {
+                                for (int rc = 0; rc < rrcnt; rc++)
+                                {
+                                    startlist[rc][first_vdim] += vdesc->record;
+                                }
+                            }
+                        }
+                        else
+                        {
+                            size_t first_vdim = 0;
+                            if (ndims < fndims)
+                            {
+                                first_vdim = fndims - ndims;
+                                for (int rc = 0; rc < rrcnt; rc++)
+                                {
+                                    startlist[rc] += first_vdim;
+                                    countlist[rc] += first_vdim;
+                                }
+                            }
+                        }
+
 
                         /* Get a pointer to the data. */
                         bufptr = (void *)((char *)iobuf + nv * tsize * llen);
@@ -319,6 +406,54 @@ int pio_write_darray_multi_nc(file_desc_t *file, int nvars, const int *vid, int 
                         /* Write, in non-blocking fashion, a list of subarrays. */
                         LOG((3, "about to call ncmpi_iput_varn() vid[%d] = %d rrcnt = %d, llen = %d",
                              nv, vid[nv], rrcnt, llen));
+                        {
+                            char vname[NC_MAX_NAME];
+                            nc_type vtype;
+                            int vndims, vnatts;
+                            int vdims[NC_MAX_VAR_DIMS];
+                            ierr = ncmpi_inq_var(file->fh, vid[nv], vname, &vtype,
+                                      &vndims, vdims, &vnatts);
+                            if(ierr != NC_NOERR){
+                                printf("Inquiring info about var failed\n");
+                            }
+                            else{
+                                LOG((3, "ncmpi_iput_varn(%d, %d, %s, %s, %d, %d)\n",
+                                    file->fh, vid[nv], vname,
+                                    ((vtype == NC_INT) ? "NC_INT" : 
+                                        ((vtype == NC_FLOAT) ? "NC_FLOAT" :
+                                            ((vtype == NC_DOUBLE) ? "NC_DOUBLE" : 
+                                              "OTHER"))),
+                                    vndims, vnatts));
+                                {
+                                    char dname[NC_MAX_NAME];
+                                    MPI_Offset dim_len;
+                                    for(int didx = 0; didx < vndims; didx++){
+                                        ierr = ncmpi_inq_dim(file->fh, vdims[didx],
+                                                  dname, &dim_len);
+                                        if(ierr != NC_NOERR){
+                                            printf("Inquiring dim info failed\n");
+                                        }
+                                        else{
+                                            LOG((3, "ncmpi_iput_varn(%s, %s, %ld)",
+                                                vname, dname, dim_len));
+                                            for(int tmpi=0; tmpi < rrcnt; tmpi++){
+                                              if(startlist[tmpi][didx] >= dim_len){
+                                                  LOG((3, "ERROR : strt(%ld) >= %d",
+                                                      startlist[tmpi][didx], dim_len));
+                                              }
+                                              if(startlist[tmpi][didx] + 
+                                                  countlist[tmpi][didx] > dim_len){
+                                                  LOG((3, "ERROR:strt(%ld)+cnt(%ld)>%d",
+                                                      startlist[tmpi][didx],
+                                                      countlist[tmpi][didx],
+                                                      dim_len));
+                                              }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                         ierr = ncmpi_iput_varn(file->fh, vid[nv], rrcnt, startlist, countlist,
                                                bufptr, llen, basetype, vdesc->request + reqn);
 
@@ -327,7 +462,19 @@ int pio_write_darray_multi_nc(file_desc_t *file, int nvars, const int *vid, int 
                             vdesc->request[reqn] = PIO_REQ_NULL;
 
                         vdesc->nreqs += reqn + 1;
-
+                        if (vdesc->record < 0)
+                        {
+                            size_t first_vdim = 0;
+                            if (ndims < fndims)
+                            {
+                                first_vdim = fndims - ndims;
+                                for (int rc = 0; rc < rrcnt; rc++)
+                                {
+                                    startlist[rc] -= first_vdim;
+                                    countlist[rc] -= first_vdim;
+                                }
+                            }
+                        }
                     }
 
                     /* Free resources. */
