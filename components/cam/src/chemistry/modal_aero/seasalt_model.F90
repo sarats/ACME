@@ -792,6 +792,8 @@ add_om_species: if ( has_mam_mom ) then
     real(r8), intent(inout) :: mass_frac_bub_section(:,:,:)
     real(r8), intent(inout) :: om_ssa(:,:)
     real(r8), intent(in) :: u10(:)               ! Needed in Gantt et al. calculation of organic mass fraction
+   ! OMF maximum and minimum values -- max from Rinaldi et al. (2013)
+   real(r8), parameter :: omfrac_max = 0.78
    !
    ! Local variables
     integer  :: i
@@ -806,8 +808,20 @@ add_om_species: if ( has_mam_mom ) then
     om_ssa = 0.00_r8 ! initialize
     section_loop: do i=1, nsections
 !       om_ssa(:, i) = 75.9_r8 * chla_in(:) - 3.99_r8
-       om_ssa(:, i) = 56.9_r8 * chla_in(:) - 4.64_r8 * u10(:) + 40.9_r8
+       om_ssa(:, i) = (56.9_r8 * chla_in(:) - 4.64_r8 * u10(:) + 40.9_r8)/100
+   ! Set Max value
+      where (om_ssa(:, i) .gt. omfrac_max)
+         om_ssa(:, i) = omfrac_max
+      end where
     end do section_loop
+
+   ! Must exceed threshold value small_oceanorg
+   where (mass_frac_bub(:, :) .lt. small_oceanorg)
+      mass_frac_bub(:, :) = 0.0_r8
+   end where
+
+   mass_frac_bub_tot(:) = sum(mass_frac_bub, dim=2)
+
 
 ! Divide mass amonst organic tracers
 ! For now, put 75% in polys, 20% in lipids, and 5% in proteins
@@ -856,7 +870,8 @@ add_om_species: if ( has_mam_mom ) then
    mass_frac_bub_section(:, :, :)   = 0.0_r8
 
    sec_loop: do i=1,size(om_ssa, 2)
-      mass_frac_bub_section(:, 1, i)   = om_ssa(:, i) / (1. + exp(-2.63 * chla_in(:) + 0.18 * u10(:)))
+      mass_frac_bub_section(:, 1, i)   = om_ssa(:, i) / (1.0_r8 + &
+      			       	       	 exp(-2.63_r8 * chla_in(:) + 0.18_r8 * u10(:)))
    end do sec_loop
 
  end subroutine calc_om_ssa_gantt
@@ -1100,7 +1115,7 @@ add_om_species: if ( has_mam_mom ) then
     do m=1,nsections
        ! update only in Aitken and accu. modes
        if (Dg(m).ge.sst_sz_range_lo(2) .and. Dg(m).lt.sst_sz_range_hi(1)) then
-          om_ssa(:, m) = om_ssa_max(:) / (1._r8 + 0.03_r8 * exp(6.18_r8 * Dg(m) * 1.e-6_r8)) &
+          om_ssa(:, m) = om_ssa_max(:) / (1._r8 + 0.03_r8 * exp(6.18_r8 * Dg(m))) &
                + om_ssa_min
        else
           om_ssa(:, m) = 0.0_r8 ! Set to zero for "fine sea salt" and "coarse sea salt" modes
