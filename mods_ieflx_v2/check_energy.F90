@@ -229,7 +229,7 @@ end subroutine check_energy_get_integrals
     if(ieflx_opt>0) then 
        call addfld('IEFLX',    horiz_only, 'A', 'W/m2', 'Implied internal energy flux')
        call addfld('SHFLXORI', horiz_only, 'A', 'W/m2', 'SHFLX before adding IEFLX')
-       call add_default ('SHFLXFIX', 1, ' ') 
+       call add_default ('IEFLX', 1, ' ') 
     end if 
 
   end subroutine check_energy_init
