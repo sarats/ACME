@@ -758,17 +758,17 @@ contains
     ! Read in soilorder data 
     ! --------------------------------------------------------------------
 
-    allocate(soilorder_rdin(bounds%begg:bounds%endg))
-    !call ncd_io(ncid=ncid, varname='SOIL_ORDER', flag='read',data=soilorder_rdin, dim1name=grlnd, readvar=readvar)
-    !if (.not. readvar) then
-    !   call endrun(msg=' ERROR: SOIL_ORDER NOT on surfdata file'//errMsg(__FILE__, __LINE__))
-    !end if
-    do c = bounds%begc, bounds%endc
-       g = col_pp%gridcell(c)
-!       this%isoilorder(c) = soilorder_rdin(g)
-       this%isoilorder(c) = 12
-    end do
-    deallocate(soilorder_rdin)
+    if ( (nu_com .eq. 'RD' .or. nu_com .eq. 'ECA') .and. (use_cn .and. .not. use_ed .and. .not. use_crop) )  then 
+       allocate(soilorder_rdin(bounds%begg:bounds%endg))
+       call ncd_io(ncid=ncid, varname='SOIL_ORDER', flag='read',data=soilorder_rdin, dim1name=grlnd, readvar=readvar)
+       if (.not. readvar) then
+          call endrun(msg=' ERROR: SOIL_ORDER NOT on surfdata file'//errMsg(__FILE__, __LINE__))
+       end if
+       do c = bounds%begc, bounds%endc
+          g = col_pp%gridcell(c)
+          this%isoilorder(c) = soilorder_rdin(g)
+       end do
+       deallocate(soilorder_rdin)
 
 
     ! --------------------------------------------------------------------
