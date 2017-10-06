@@ -15,8 +15,10 @@ module CNStateType
   use clm_varctl     , only : iulog, fsurdat
   use LandunitType   , only : lun_pp                
   use ColumnType     , only : col_pp                
+  use clm_varctl          , only : nu_com
   use VegetationType      , only : veg_pp                
   use clm_varctl     , only: forest_fert_exp
+  use clm_varctl   , only:  use_ed,use_crop
   ! 
   ! !PUBLIC TYPES:
   implicit none
@@ -769,7 +771,7 @@ contains
           this%isoilorder(c) = soilorder_rdin(g)
        end do
        deallocate(soilorder_rdin)
-
+    endif
 
     ! --------------------------------------------------------------------
     ! forest fertilization experiments info, Q. Z. 2017

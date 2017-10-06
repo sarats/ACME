@@ -625,7 +625,7 @@ contains
          biochem_pmin_vr      => phosphorusflux_vars%biochem_pmin_vr_col  , &
          biochem_pmin_ppools_vr_col  => phosphorusflux_vars%biochem_pmin_ppools_vr_col ,&
          npimbalance          => nitrogenstate_vars%npimbalance_patch     , &
-         vmax_ptase_vr        => veg_vp%vmax_ptase_vr                 , &
+         vmax_ptase           => veg_vp%vmax_ptase                    , &
          km_ptase             => veg_vp%km_ptase                      , &
          decomp_ppools_vr_col => phosphorusstate_vars%decomp_ppools_vr_col, &
          lamda_ptase          => veg_vp%lamda_ptase                   ,  & ! critical value of nitrogen cost of phosphatase activity induced phosphorus uptake
