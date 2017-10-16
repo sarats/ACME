@@ -236,10 +236,13 @@ contains
          ps%ppool_patch(p) = &
               ps%ppool_patch(p) + pf%sminp_to_ppool_patch(p)*dt
 
+         ! update from surface layer supp phosphorus
+         ps%ppool_patch(p) = &
+              ps%ppool_patch(p) + pf%supplement_to_sminp_surf_patch(p)*dt
+
          ! deployment from retranslocation pool
          ps%ppool_patch(p)    = ps%ppool_patch(p)    + pf%retransp_to_ppool_patch(p)*dt
          ps%retransp_patch(p) = ps%retransp_patch(p) - pf%retransp_to_ppool_patch(p)*dt
-
          ! allocation fluxes
          ps%ppool_patch(p)           = ps%ppool_patch(p)          - pf%ppool_to_leafp_patch(p)*dt
          ps%leafp_patch(p)           = ps%leafp_patch(p)          + pf%ppool_to_leafp_patch(p)*dt
