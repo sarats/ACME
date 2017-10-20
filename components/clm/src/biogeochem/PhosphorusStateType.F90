@@ -107,6 +107,7 @@ module PhosphorusStateType
      real(r8), pointer :: endpb_col                    (:)     ! col phosphorus mass, end of time step (gP/m**2)
      real(r8), pointer :: errpb_col                    (:)     ! colphosphorus balance error for the timestep (gP/m**2)
 
+     logical :: RG_spinup = .false.
      real(r8), pointer :: solutionp_vr_col_cur         (:,:)
      real(r8), pointer :: solutionp_vr_col_prev        (:,:)
      real(r8), pointer :: labilep_vr_col_cur           (:,:)
@@ -437,7 +438,7 @@ contains
     this%ppool_patch(begp:endp) = spval
     call hist_addfld1d (fname='PPOOL', units='gP/m^2', &
          avgflag='A', long_name='temporary plant P pool', &
-         ptr_patch=this%ppool_patch, default='inactive')
+         ptr_patch=this%ppool_patch, default='active')
 
     this%ptrunc_patch(begp:endp) = spval
     call hist_addfld1d (fname='PFT_PTRUNC', units='gP/m^2', &
@@ -1236,6 +1237,7 @@ contains
        if (spinup_state == 0 .and. restart_file_spinup_state == 1 ) then
           if ( masterproc ) write(iulog,*) ' NitrogenStateType Restart: taking SOM pools out of AD spinup mode'
           exit_spinup = .true.
+          this%RG_spinup = .true.
        else if (spinup_state == 1 .and. restart_file_spinup_state == 0 ) then
           if ( masterproc ) write(iulog,*) ' NitrogenStateType Restart: taking SOM pools into AD spinup mode'
           enter_spinup = .true.

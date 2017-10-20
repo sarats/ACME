@@ -1124,7 +1124,7 @@ contains
     
     real(r8) :: sminn_tot(bounds%begc:bounds%endc)
     !
-    integer :: c,p,l,j,k                                             !indices
+    integer :: g,c,p,l,j,k                                           !indices
     integer :: fp                                                    !lake filter pft index
     integer :: fc                                                    !lake filter column index
 
@@ -1247,8 +1247,12 @@ contains
          leafn                        => nitrogenstate_vars%leafn_patch                        , &
 
          vmax_plant_nh4               => veg_vp%vmax_plant_nh4                             , &
+         vmax_plant_nh4_grid          => veg_vp%vmax_plant_nh4_grid                        , &
+         vmax_plant_nh4_grid_present  => veg_vp%vmax_plant_nh4_grid_present                , &
          vmax_plant_no3               => veg_vp%vmax_plant_no3                             , &
          vmax_plant_p                 => veg_vp%vmax_plant_p                               , &
+         vmax_plant_p_grid            => veg_vp%vmax_plant_p_grid                          , &
+         vmax_plant_p_grid_present    => veg_vp%vmax_plant_p_grid_present                  , &
 
          nfixation_prof               => cnstate_vars%nfixation_prof_col                       , & ! Output: [real(r8) (:,:) ]                                        
 
@@ -1264,6 +1268,8 @@ contains
          km_plant_nh4                 => veg_vp%km_plant_nh4                               , &
          km_plant_no3                 => veg_vp%km_plant_no3                               , &
          km_plant_p                   => veg_vp%km_plant_p                                 , &
+         km_plant_p_grid              => veg_vp%km_plant_p_grid                            , &
+         km_plant_p_grid_present      => veg_vp%km_plant_p_grid_present                    , &
          km_minsurf_p_vr              => veg_vp%km_minsurf_p_vr                            , &
 
          decompmicc_patch_vr          => veg_vp%decompmicc_patch_vr                        , &
@@ -1437,8 +1443,15 @@ contains
                                                    leafcn(ivt(p))*(1- cn_stoich_var)) / &
                                                    (leafcn(ivt(p)) - leafcn(ivt(p))*(1- cn_stoich_var)),0.0_r8),1.0_r8)
                         endif
-                        plant_ndemand_vr_patch(p,j) = vmax_plant_nh4(ivt(p))* frootc(p) * &
-                             froot_prof(p,j) * cn_scalar(p) * t_scalar(c,j) *  compet_plant_n(p) 
+
+                        if (.not.vmax_plant_nh4_grid_present) then
+                           plant_ndemand_vr_patch(p,j) = vmax_plant_nh4(ivt(p))* frootc(p) * &
+                                froot_prof(p,j) * cn_scalar(p) * t_scalar(c,j) *  compet_plant_n(p)
+                        else
+                           g = veg_pp%gridcell(p)
+                           plant_ndemand_vr_patch(p,j) = vmax_plant_nh4_grid(g)* frootc(p) * &
+                                froot_prof(p,j) * cn_scalar(p) * t_scalar(c,j) *  compet_plant_n(p)
+                        endif
 
                         plant_ndemand_vr_patch(p,j) = max(plant_ndemand_vr_patch(p,j), 0.0_r8)
                         col_plant_ndemand_vr(c,j) = col_plant_ndemand_vr(c,j) + plant_ndemand_vr_patch(p,j)*veg_pp%wtcol(p)
@@ -1584,7 +1597,12 @@ contains
                   decompmicc(c,j) = 0.0_r8
                   do p = col_pp%pfti(c), col_pp%pftf(c)
                      if (veg_pp%active(p).and. (veg_pp%itype(p) .ne. noveg)) then
-                        e_km_p = e_km_p + e_plant_scalar*frootc(p)*froot_prof(p,j)*veg_pp%wtcol(p)/km_plant_p(ivt(p))
+                        if (.not.km_plant_p_grid_present) then
+                           e_km_p = e_km_p + e_plant_scalar*frootc(p)*froot_prof(p,j)*veg_pp%wtcol(p)/km_plant_p(ivt(p))
+                        else
+                           g      = veg_pp%gridcell(p)
+                           e_km_p = e_km_p + e_plant_scalar*frootc(p)*froot_prof(p,j)*veg_pp%wtcol(p)/km_plant_p_grid(g)
+                        endif
                         decompmicc(c,j) = decompmicc(c,j) + decompmicc_patch_vr(ivt(p),j)*veg_pp%wtcol(p)
                      end if
                   end do
@@ -1592,8 +1610,14 @@ contains
                        max(0._r8,vmax_minsurf_p_vr(isoilorder(c),j)-labilep_vr(c,j))/km_minsurf_p_vr(isoilorder(c),j)
                   do p = col_pp%pfti(c), col_pp%pftf(c)
                      if (veg_pp%active(p).and. (veg_pp%itype(p) .ne. noveg)) then
-                        compet_plant_p(p) = solution_pconc(c,j) / ( km_plant_p(ivt(p)) * (1 + &
-                             solution_pconc(c,j)/km_plant_p(ivt(p)) + e_km_p))
+                        if (.not.km_plant_p_grid_present) then
+                           compet_plant_p(p) = solution_pconc(c,j) / ( km_plant_p(ivt(p)) * (1 + &
+                                solution_pconc(c,j)/km_plant_p(ivt(p)) + e_km_p))
+                        else
+                           g                 = veg_pp%gridcell(p)
+                           compet_plant_p(p) = solution_pconc(c,j) / ( km_plant_p_grid(g) * (1 + &
+                                solution_pconc(c,j)/km_plant_p_grid(g) + e_km_p))
+                        endif
                      else
                         compet_plant_p(p) = 0.0_r8
                      end if
@@ -1617,8 +1641,15 @@ contains
                                                   (leafcp(ivt(p)) - leafcp(ivt(p))*(1- cp_stoich_var)),0.0_r8),1.0_r8)
                         endif
 
-                        plant_pdemand_vr_patch(p,j) = vmax_plant_p(ivt(p)) * frootc(p) * froot_prof(p,j) * &
-                             cp_scalar(p) * t_scalar(c,j) * compet_plant_p(p)
+                        if (.not.vmax_plant_p_grid_present) then
+                           plant_pdemand_vr_patch(p,j) = vmax_plant_p(ivt(p)) * frootc(p) * froot_prof(p,j) * &
+                                cp_scalar(p) * t_scalar(c,j) * compet_plant_p(p)
+                        else
+                           g = veg_pp%gridcell(p)
+                           plant_pdemand_vr_patch(p,j) = vmax_plant_p_grid(g) * frootc(p) * froot_prof(p,j) * &
+                                cp_scalar(p) * t_scalar(c,j) * compet_plant_p(p)
+                        endif
+
                         plant_pdemand_vr_patch(p,j) = max(plant_pdemand_vr_patch(p,j),0.0_r8)
                         col_plant_pdemand_vr(c,j) = col_plant_pdemand_vr(c,j) + plant_pdemand_vr_patch(p,j)*veg_pp%wtcol(p)
                      else
@@ -2149,8 +2180,14 @@ contains
                                                   (leafcn(ivt(p)) - leafcn(ivt(p))*(1- cn_stoich_var)),0.0_r8),1.0_r8)
                         endif
 
-                        plant_nh4demand_vr_patch(p,j) = vmax_plant_nh4(ivt(p))* frootc(p) * froot_prof(p,j) * &
-                             cn_scalar(p) * t_scalar(c,j) * compet_plant_nh4(p) 
+                        if (.not.vmax_plant_nh4_grid_present) then
+                           plant_nh4demand_vr_patch(p,j) = vmax_plant_nh4(ivt(p))* frootc(p) * froot_prof(p,j) * &
+                                cn_scalar(p) * t_scalar(c,j) * compet_plant_nh4(p)
+                        else
+                           g = veg_pp%gridcell(p)
+                           plant_nh4demand_vr_patch(p,j) = vmax_plant_nh4_grid(g)* frootc(p) * froot_prof(p,j) * &
+                                cn_scalar(p) * t_scalar(c,j) * compet_plant_nh4(p)
+                        endif
                         plant_no3demand_vr_patch(p,j) = vmax_plant_no3(ivt(p)) * frootc(p) * froot_prof(p,j) * &
                              cn_scalar(p) * t_scalar(c,j) * compet_plant_no3(p)
                         plant_nh4demand_vr_patch(p,j) = max(plant_nh4demand_vr_patch(p,j),0.0_r8)
@@ -2414,7 +2451,12 @@ contains
                   decompmicc(c,j) = 0.0_r8
                   do p = col_pp%pfti(c), col_pp%pftf(c)
                      if (veg_pp%active(p).and. (veg_pp%itype(p) .ne. noveg)) then
-                        e_km_p = e_km_p + e_plant_scalar*frootc(p)*froot_prof(p,j)*veg_pp%wtcol(p)/km_plant_p(ivt(p))
+                        if (.not.km_plant_p_grid_present) then
+                           e_km_p = e_km_p + e_plant_scalar*frootc(p)*froot_prof(p,j)*veg_pp%wtcol(p)/km_plant_p(ivt(p))
+                        else
+                           g      = veg_pp%gridcell(p)
+                           e_km_p = e_km_p + e_plant_scalar*frootc(p)*froot_prof(p,j)*veg_pp%wtcol(p)/km_plant_p_grid(g)
+                        endif
                         decompmicc(c,j) = decompmicc(c,j) + decompmicc_patch_vr(ivt(p),j)*veg_pp%wtcol(p)
                      end if
                   end do
@@ -2422,8 +2464,14 @@ contains
                        max(0._r8,vmax_minsurf_p_vr(isoilorder(c),j)-labilep_vr(c,j))/km_minsurf_p_vr(isoilorder(c),j)
                   do p = col_pp%pfti(c), col_pp%pftf(c)
                      if (veg_pp%active(p).and. (veg_pp%itype(p) .ne. noveg)) then
-                        compet_plant_p(p) = solution_pconc(c,j) / ( km_plant_p(ivt(p)) * (1 + &
-                             solution_pconc(c,j)/km_plant_p(ivt(p)) + e_km_p))
+                        if (.not.km_plant_p_grid_present) then
+                           compet_plant_p(p) = solution_pconc(c,j) / ( km_plant_p(ivt(p)) * (1 + &
+                                solution_pconc(c,j)/km_plant_p(ivt(p)) + e_km_p))
+                        else
+                           g = veg_pp%gridcell(p)
+                           compet_plant_p(p) = solution_pconc(c,j) / ( km_plant_p_grid(g) * (1 + &
+                                solution_pconc(c,j)/km_plant_p_grid(g) + e_km_p))
+                        endif
                      else
                         compet_plant_p(p) = 0.0_r8
                      end if
@@ -2447,8 +2495,14 @@ contains
                                                   (leafcp(ivt(p)) - leafcp(ivt(p))*(1- cp_stoich_var)),0.0_r8),1.0_r8)
                         endif
 
-                        plant_pdemand_vr_patch(p,j) = vmax_plant_p(ivt(p)) * frootc(p) * froot_prof(p,j) * &
-                             cp_scalar(p) * t_scalar(c,j) * compet_plant_p(p)
+                        if (.not.vmax_plant_p_grid_present) then
+                           plant_pdemand_vr_patch(p,j) = vmax_plant_p(ivt(p)) * frootc(p) * froot_prof(p,j) * &
+                                cp_scalar(p) * t_scalar(c,j) * compet_plant_p(p)
+                        else
+                           g = veg_pp%gridcell(p)
+                           plant_pdemand_vr_patch(p,j) = vmax_plant_p_grid(g) * frootc(p) * froot_prof(p,j) * &
+                                cp_scalar(p) * t_scalar(c,j) * compet_plant_p(p)
+                        endif
                         plant_pdemand_vr_patch(p,j) = max(plant_pdemand_vr_patch(p,j),0.0_r8)
                         col_plant_pdemand_vr(c,j) = col_plant_pdemand_vr(c,j) + plant_pdemand_vr_patch(p,j)*veg_pp%wtcol(p)
                      else
@@ -3821,6 +3875,23 @@ contains
          end if
 
       end do ! end pft loop
+
+      ! QING ZHU 2017
+      ! update CUE for woody/litter decomposition based on NP limitation condition
+      ! Manzoni 2012 DOI: 10.1111/j.1469-8137.2012.04225.x, CUE change from 80% to 10%
+      ! when microbe become more and more nutrient limited
+      !if (nu_com .ne. 'RD') then
+      !   do j = 1, nlevdecomp
+      !      do fc=1,num_soilc
+      !         c = filter_soilc(fc)
+      !         rf_decomp_cascade(c,j,9) = 0.55_r8 !0.8_r8 - 0.7_r8*min(1.0_r8,max(0.0_r8,min(fpi_vr(c,j),fpi_p_vr(c,j))))  ! i_cwdl3
+      !         rf_decomp_cascade(c,j,10) = 0.55_r8 !0.8_r8 - 0.7_r8*min(1.0_r8,max(0.0_r8,min(fpi_vr(c,j),fpi_p_vr(c,j)))) ! i_cwdl3
+      !         !rf_decomp_cascade(c,j,1) = 0.8_r8 - 0.7_r8*min(1.0_r8,max(0.0_r8,min(fpi_vr(c,j),fpi_p_vr(c,j)))) ! i_l1s1
+      !         !rf_decomp_cascade(c,j,2) = 0.8_r8 - 0.7_r8*min(1.0_r8,max(0.0_r8,min(fpi_vr(c,j),fpi_p_vr(c,j)))) ! i_l1s2
+      !         !rf_decomp_cascade(c,j,3) = 0.8_r8 - 0.7_r8*min(1.0_r8,max(0.0_r8,min(fpi_vr(c,j),fpi_p_vr(c,j)))) ! i_l1s3
+      !      end do
+      !   end do
+      !end if
 
       !----------------------------------------------------------------
       ! now use the p2c routine to update column level soil mineral N and P uptake
