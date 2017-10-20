@@ -1263,37 +1263,51 @@ contains
                    if ((nu_com .eq. 'ECA') .or. (nu_com .eq. 'MIC')) then
                       a = 1
                       b = VMAX_MINSURF_P_vr(j,cnstate_vars%isoilorder(c)) + &
-                          KM_MINSURF_P_vr(j,cnstate_vars%isoilorder(c)) - cnstate_vars%labp_col(c)/0.5
-                      d = -1.0* cnstate_vars%labp_col(c)/0.5 * KM_MINSURF_P_vr(j,cnstate_vars%isoilorder(c))
+                          KM_MINSURF_P_vr(j,cnstate_vars%isoilorder(c)) - cnstate_vars%labp_col(c)/zisoi(nlevdecomp)
+                      d = -1.0* cnstate_vars%labp_col(c)/zisoi(nlevdecomp) * KM_MINSURF_P_vr(j,cnstate_vars%isoilorder(c))
+
+                      this%solutionp_vr_col(c,j) = (-b+(b**2-4*a*d)**0.5)/(2*a)
+                      this%labilep_vr_col(c,j) = cnstate_vars%labp_col(c)/zisoi(nlevdecomp) - this%solutionp_vr_col(c,j)
+                      this%secondp_vr_col(c,j) = cnstate_vars%secp_col(c)/zisoi(nlevdecomp)
+                      this%occlp_vr_col(c,j) = cnstate_vars%occp_col(c)/zisoi(nlevdecomp)
+                      this%primp_vr_col(c,j) = cnstate_vars%prip_col(c)/zisoi(nlevdecomp)
                    else if (nu_com .eq. 'RD') then
                       a = 1
                       b = smax(cnstate_vars%isoilorder(c)) + &
                           ks_sorption(cnstate_vars%isoilorder(c)) - cnstate_vars%labp_col(c)/0.5
                       d = -1.0* cnstate_vars%labp_col(c)/0.5 * ks_sorption(cnstate_vars%isoilorder(c))
+
+                      this%solutionp_vr_col(c,j) = (-b+(b**2-4*a*d)**0.5)/(2*a)
+                      this%labilep_vr_col(c,j) = cnstate_vars%labp_col(c)/0.5 - this%solutionp_vr_col(c,j)
+                      this%secondp_vr_col(c,j) = cnstate_vars%secp_col(c)/0.5
+                      this%occlp_vr_col(c,j) = cnstate_vars%occp_col(c)/0.5
+                      this%primp_vr_col(c,j) = cnstate_vars%prip_col(c)/0.5
                    end if
-                   this%solutionp_vr_col(c,j) = (-b+(b**2-4*a*d)**0.5)/(2*a)
-                   this%labilep_vr_col(c,j) = cnstate_vars%labp_col(c)/0.5 - this%solutionp_vr_col(c,j)
-                   this%secondp_vr_col(c,j) = cnstate_vars%secp_col(c)/0.5
-                   this%occlp_vr_col(c,j) = cnstate_vars%occp_col(c)/0.5
-                   this%primp_vr_col(c,j) = cnstate_vars%prip_col(c)/0.5
                 end do
              else
                 if ((nu_com .eq. 'ECA') .or. (nu_com .eq. 'MIC')) then
                    a = 1
                    b = VMAX_MINSURF_P_vr(1,cnstate_vars%isoilorder(c)) + &
-                       KM_MINSURF_P_vr(1,cnstate_vars%isoilorder(c)) - cnstate_vars%labp_col(c)/0.5
-                   d = -1.0* cnstate_vars%labp_col(c)/0.5 * KM_MINSURF_P_vr(j,cnstate_vars%isoilorder(c))
+                       KM_MINSURF_P_vr(1,cnstate_vars%isoilorder(c)) - cnstate_vars%labp_col(c)/zisoi(nlevdecomp)
+                   d = -1.0* cnstate_vars%labp_col(c)/zisoi(nlevdecomp) * KM_MINSURF_P_vr(j,cnstate_vars%isoilorder(c))
+
+                   this%solutionp_vr_col(c,1) = (-b+(b**2-4*a*d)**0.5)/(2*a) * zisoi(nlevdecomp) ! convert to g/m2
+                   this%labilep_vr_col(c,1) = cnstate_vars%labp_col(c) - this%solutionp_vr_col(c,1)
+                   this%secondp_vr_col(c,1) = cnstate_vars%secp_col(c)
+                   this%occlp_vr_col(c,1) = cnstate_vars%occp_col(c)
+                   this%primp_vr_col(c,1) = cnstate_vars%prip_col(c)
                 else if (nu_com .eq. 'RD') then
                    a = 1
                    b = smax(cnstate_vars%isoilorder(c)) + &
                        ks_sorption(cnstate_vars%isoilorder(c)) - cnstate_vars%labp_col(c)/0.5
                    d = -1.0* cnstate_vars%labp_col(c)/0.5 * ks_sorption(cnstate_vars%isoilorder(c))
+
+                   this%solutionp_vr_col(c,1) = (-b+(b**2-4*a*d)**0.5)/(2*a) * 0.5 ! convert to g/m2
+                   this%labilep_vr_col(c,1) = cnstate_vars%labp_col(c) - this%solutionp_vr_col(c,1)
+                   this%secondp_vr_col(c,1) = cnstate_vars%secp_col(c)
+                   this%occlp_vr_col(c,1) = cnstate_vars%occp_col(c)
+                   this%primp_vr_col(c,1) = cnstate_vars%prip_col(c)
                 end if
-                this%solutionp_vr_col(c,1) = (-b+(b**2-4*a*d)**0.5)/(2*a) * 0.5 ! convert to g/m2
-                this%labilep_vr_col(c,1) = cnstate_vars%labp_col(c) - this%solutionp_vr_col(c,1)
-                this%secondp_vr_col(c,1) = cnstate_vars%secp_col(c)
-                this%occlp_vr_col(c,1) = cnstate_vars%occp_col(c)
-                this%primp_vr_col(c,1) = cnstate_vars%prip_col(c)
              end if
           end do
        end if
