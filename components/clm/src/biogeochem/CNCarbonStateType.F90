@@ -3048,7 +3048,6 @@ contains
        this%totvegc_patch(p) = &
             this%dispvegc_patch(p) + &
             this%storvegc_patch(p)
-
        ! total pft-level carbon, including xsmrpool, ctrunc
        this%totpftc_patch(p) = &
             this%totvegc_patch(p) + &
