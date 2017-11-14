@@ -1154,8 +1154,8 @@ contains
     real(r8):: solution_nh4conc(bounds%begc:bounds%endc, 1:nlevdecomp)    ! temp solution concentration g nutrient per m3 water, because VMAX/KM are measured in hydroponic chamber
     real(r8):: solution_no3conc(bounds%begc:bounds%endc, 1:nlevdecomp) 
     real(r8):: solution_pconc(bounds%begc:bounds%endc, 1:nlevdecomp)
-    real(r8):: cn_stoich_var=0.2    ! variability of CN ratio
-    real(r8):: cp_stoich_var=0.4    ! variability of CP ratio
+    real(r8):: cn_stoich_var=0.01    ! variability of CN ratio
+    real(r8):: cp_stoich_var=0.01    ! variability of CP ratio
     !-----------------------------------------------------------------------
 
     associate(                                                                                 &
@@ -2103,19 +2103,25 @@ contains
                   e_km_no3 = e_km_no3 + e_decomp_scalar*decompmicc(c,j)*(1._r8/km_decomp_no3 + 1._r8/km_den)
                   do p = col_pp%pfti(c), col_pp%pftf(c)
                      if (veg_pp%active(p).and. (veg_pp%itype(p) .ne. noveg)) then
-                        compet_plant_nh4(p) = solution_nh4conc(c,j) / ( km_plant_nh4(ivt(p)) * (1 + &
-                             solution_nh4conc(c,j)/km_plant_nh4(ivt(p)) + e_km_nh4))
-                        compet_plant_no3(p) = solution_no3conc(c,j) / ( km_plant_no3(ivt(p)) * (1 + &
-                             solution_no3conc(c,j)/km_plant_no3(ivt(p)) + e_km_no3))
+                        !compet_plant_nh4(p) = solution_nh4conc(c,j) / ( km_plant_nh4(ivt(p)) * (1 + &
+                        !     solution_nh4conc(c,j)/km_plant_nh4(ivt(p)) + e_km_nh4))
+                        !compet_plant_no3(p) = solution_no3conc(c,j) / ( km_plant_no3(ivt(p)) * (1 + &
+                        !     solution_no3conc(c,j)/km_plant_no3(ivt(p)) + e_km_no3))
+                        compet_plant_nh4(p) = 1._r8
+                        compet_plant_no3(p) = 1._r8
                      else
                         compet_plant_nh4(p) = 0.0_r8
                         compet_plant_no3(p) = 0.0_r8
                      end if
                   end do
-                  compet_decomp_nh4 = solution_nh4conc(c,j) / (km_decomp_nh4 * (1 + solution_nh4conc(c,j)/km_decomp_nh4 + e_km_nh4))
-                  compet_nit = solution_nh4conc(c,j) / (km_nit * (1 + solution_nh4conc(c,j)/km_nit + e_km_nh4))
-                  compet_decomp_no3 = solution_no3conc(c,j) / (km_decomp_no3 * (1 + solution_no3conc(c,j)/km_decomp_no3 + e_km_no3))
-                  compet_denit = solution_no3conc(c,j) / (km_den * (1 + solution_no3conc(c,j)/km_den + e_km_no3))
+                  !compet_decomp_nh4 = solution_nh4conc(c,j) / (km_decomp_nh4 * (1 + solution_nh4conc(c,j)/km_decomp_nh4 + e_km_nh4))
+                  !compet_nit = solution_nh4conc(c,j) / (km_nit * (1 + solution_nh4conc(c,j)/km_nit + e_km_nh4))
+                  !compet_decomp_no3 = solution_no3conc(c,j) / (km_decomp_no3 * (1 + solution_no3conc(c,j)/km_decomp_no3 + e_km_no3))
+                  !compet_denit = solution_no3conc(c,j) / (km_den * (1 + solution_no3conc(c,j)/km_den + e_km_no3))
+                  compet_decomp_nh4 = 1._r8
+                  compet_nit = 1._r8
+                  compet_decomp_no3 = 1._r8
+                  compet_denit = 1._r8
 
                   ! relative demand approach: root nutrient uptake profile is based on nutrient concentration profile
                   ! nu_com with ECA or MIC: root nutrient uptake profile is based on fine root density profile
@@ -2400,15 +2406,18 @@ contains
                        max(0._r8,vmax_minsurf_p_vr(isoilorder(c),j)-labilep_vr(c,j))/km_minsurf_p_vr(isoilorder(c),j)
                   do p = col_pp%pfti(c), col_pp%pftf(c)
                      if (veg_pp%active(p).and. (veg_pp%itype(p) .ne. noveg)) then
-                        compet_plant_p(p) = solution_pconc(c,j) / ( km_plant_p(ivt(p)) * (1 + &
-                             solution_pconc(c,j)/km_plant_p(ivt(p)) + e_km_p))
+                        !compet_plant_p(p) = solution_pconc(c,j) / ( km_plant_p(ivt(p)) * (1 + &
+                        !     solution_pconc(c,j)/km_plant_p(ivt(p)) + e_km_p))
+                        compet_plant_p(p) = 1._r8
                      else
                         compet_plant_p(p) = 0.0_r8
                      end if
                   end do
-                  compet_decomp_p = solution_pconc(c,j) / (km_decomp_p * (1 + solution_pconc(c,j)/km_decomp_p + e_km_p))
-                  compet_minsurf_p = solution_pconc(c,j) / (km_minsurf_p_vr(isoilorder(c),j) * &
-                       (1 + solution_pconc(c,j)/km_minsurf_p_vr(isoilorder(c),j) + e_km_p))
+                  !compet_decomp_p = solution_pconc(c,j) / (km_decomp_p * (1 + solution_pconc(c,j)/km_decomp_p + e_km_p))
+                  !compet_minsurf_p = solution_pconc(c,j) / (km_minsurf_p_vr(isoilorder(c),j) * &
+                  !     (1 + solution_pconc(c,j)/km_minsurf_p_vr(isoilorder(c),j) + e_km_p))
+                  compet_decomp_p = 1._r8
+                  compet_minsurf_p = 1._r8
 
                   ! relative demand approach: root nutrient uptake profile is based on nutrient concentration profile
                   ! nu_com with ECA or MIC: root nutrient uptake profile is based on fine root density profile
@@ -3182,8 +3191,8 @@ contains
              ! N_lim_factor/P_lim_factor ones: highly limited
              ! N_lim_factor/P_lim_factor zeros: not limited
              ! convert to 1- X, see explanation in dynamic_plant_alloc
-             call dynamic_plant_alloc(min(1.0_r8-N_lim_factor(p),1.0_r8-P_lim_factor(p)),W_lim_factor(p), &
-                  laisun(p)+laisha(p), allocation_leaf(p), allocation_stem(p), allocation_froot(p), woody(ivt(p))) 
+             !call dynamic_plant_alloc(min(1.0_r8-N_lim_factor(p),1.0_r8-P_lim_factor(p)),W_lim_factor(p), &
+             !     laisun(p)+laisha(p), allocation_leaf(p), allocation_stem(p), allocation_froot(p), woody(ivt(p))) 
 
              f1 = allocation_froot(p) / allocation_leaf(p)
              f2 = croot_stem(ivt(p))
@@ -3196,11 +3205,11 @@ contains
              ! This variable allocation is only for trees. Shrubs have a constant
              ! allocation as specified in the pft-physiology file.  The value is also used
              ! as a trigger here: -1.0 means to use the dynamic allocation (trees).
-             !if (stem_leaf(ivt(p)) == -1._r8) then
-             !    f3 = (2.7/(1.0+exp(-0.004*(annsum_npp(p) - 300.0)))) - 0.4
-             !else
-             !    f3 = stem_leaf(ivt(p))
-             !end if
+             if (stem_leaf(ivt(p)) == -1._r8) then
+                 f3 = (2.7/(1.0+exp(-0.004*(annsum_npp(p) - 300.0)))) - 0.4
+             else
+                 f3 = stem_leaf(ivt(p))
+             end if
 
              f4 = flivewd(ivt(p))
              g1 = grperc(ivt(p))
