@@ -718,6 +718,7 @@ contains
                glc2lnd_vars%icemask_grc(bounds_clump%begg:bounds_clump%endg))
        end do
        !$OMP END PARALLEL DO
+
        if(use_betr)then
          call ep_betr%set_active(bounds_proc, col_pp)
        endif
@@ -762,10 +763,9 @@ contains
             glc2lnd_vars%icemask_grc(bounds_clump%begg:bounds_clump%endg))
     end do
     !$OMP END PARALLEL DO
-
     if(use_betr)then
       call ep_betr%set_active(bounds_proc, col_pp)
-    endif 
+    endif
     ! ------------------------------------------------------------------------
     ! Initialize nitrogen deposition
     ! ------------------------------------------------------------------------
