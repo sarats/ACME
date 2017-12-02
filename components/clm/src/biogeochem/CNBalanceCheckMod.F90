@@ -552,7 +552,8 @@ contains
          sminp_to_plant        =>  phosphorusflux_vars%sminp_to_plant_col      , &
          cascade_receiver_pool =>  decomp_cascade_con%cascade_receiver_pool    , &
          pf                    =>  phosphorusflux_vars                         , &
-         som_p_leached         =>  phosphorusflux_vars%som_p_leached_col         &
+         som_p_leached         =>  phosphorusflux_vars%som_p_leached_col       , &
+         supplement_to_sminp_surf_col => phosphorusflux_vars%supplement_to_sminp_surf_col &
          )
 
       ! set time steps
@@ -615,7 +616,7 @@ contains
 
 
          ! calculate total column-level inputs
-         col_pinputs(c) = primp_to_labilep(c) + supplement_to_sminp(c)
+         col_pinputs(c) = primp_to_labilep(c) + supplement_to_sminp(c) + supplement_to_sminp_surf_col(c)
 !         col_pinputs(c) = leafp_to_litter_col(c)+frootp_to_litter_col(c)
 !         col_pinputs(c) = sminp_to_plant(c)
 !         col_pinputs(c) =  flux_mineralization_col(c)/dt
@@ -644,6 +645,9 @@ contains
             err_index = c
             exit
          end if
+      end do ! end of columns loop
+
+
 !      if (err_found) then
 !         c = err_index
 !         write(*,*)'column pbalance error = ', col_errpb(c), c,  get_nstep()
@@ -657,8 +661,9 @@ contains
 !         write(*,*)'net flux       = ',(col_pinputs(c)-col_poutputs(c))*dt
 !         write(*,*)'weathering p   = ', primp_to_labilep(c) * dt
 !         write(*,*)'supp p         = ', supplement_to_sminp(c) * dt
+!         write(*,*)'supp p abv     = ', supplement_to_sminp_surf_col(c) * dt
 !         write(*,*)'2nd2occl p     = ', secondp_to_occlp(c) * dt
-!         write(*,*)'leached min p  = ',sminp_leached(c) * dt
+!        write(*,*)'leached min p  = ',sminp_leached(c) * dt
 !         write(*,*)'lost to fire   = ', col_fire_ploss(c) * dt
 !         write(*,*)'harvest loss   = ', dwt_ploss(c) * dt
 !         write(*,*)'woodpro loss   = ', product_ploss(c) * dt
@@ -669,7 +674,6 @@ contains
 !         write(*,*)'blgp           = ', phosphorusstate_vars%totblgp_col(c)+phosphorusstate_vars%occlp_col(c)
 !         call endrun(msg=errMsg(__FILE__, __LINE__))
 !      end if
-      end do ! end of columns loop
 
 
       if (err_found) then
@@ -684,6 +688,7 @@ contains
          write(iulog,*)'net flux       = ',(col_pinputs(c)-col_poutputs(c))*dt
          write(iulog,*)'weathering p   = ', primp_to_labilep(c) * dt
          write(iulog,*)'supp p         = ', supplement_to_sminp(c) * dt
+         write(iulog,*)'supp p abv     = ', supplement_to_sminp_surf_col(c) * dt
          write(iulog,*)'2nd2occl p     = ', secondp_to_occlp(c) * dt
          write(iulog,*)'leached min p  = ',sminp_leached(c) * dt
          write(iulog,*)'lost to fire   = ', col_fire_ploss(c) * dt
