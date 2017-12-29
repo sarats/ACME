@@ -62,7 +62,7 @@ module ColumnType
      real(r8), pointer :: dz_lake              (:,:) ! lake layer thickness (m)  (1:nlevlak)
      real(r8), pointer :: z_lake               (:,:) ! layer depth for lake (m)
      real(r8), pointer :: lakedepth            (:)   ! variable lake depth (m)                             
-
+     logical , pointer :: debug_flag           (:)
    contains
 
      procedure, public :: Init => col_pp_init
@@ -111,7 +111,7 @@ contains
     allocate(this%topo_std    (begc:endc))                     ; this%topo_std    (:)   = nan
     allocate(this%nlevbed     (begc:endc))                     ; this%nlevbed     (:)   = ispval
     allocate(this%zibed       (begc:endc))                     ; this%zibed       (:)   = nan
-
+    allocate(this%debug_flag  (begc:endc))                     ; this%debug_flag  (:)   = .false.
   end subroutine col_pp_init
 
   !------------------------------------------------------------------------
@@ -145,7 +145,7 @@ contains
     deallocate(this%topo_std   )
     deallocate(this%nlevbed    )
     deallocate(this%zibed      )
-
+    deallocate(this%debug_flag )
   end subroutine col_pp_clean
 
 
