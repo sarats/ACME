@@ -23,6 +23,9 @@ module TemperatureType
 
      ! Temperatures
      real(r8), pointer :: t_veg_patch              (:)   ! patch vegetation temperature (Kelvin)
+     real(r8), pointer :: cisun_patch              (:)   ! patch sun ci ! QZ
+     real(r8), pointer :: cisha_patch              (:)   ! patch sha ci ! QZ
+     real(r8), pointer :: qabs_patch               (:)   ! patch absorb PAR ! QZ
      real(r8), pointer :: t_h2osfc_col             (:)   ! col surface water temperature
      real(r8), pointer :: t_h2osfc_bef_col         (:)   ! col surface water temperature from time-step before  
      real(r8), pointer :: t_ssbef_col              (:,:) ! col soil/snow temperature before update (-nlevsno+1:nlevgrnd) 
@@ -73,6 +76,9 @@ module TemperatureType
      !
      real(r8), pointer :: t_veg24_patch           (:)   ! patch 24hr average vegetation temperature (K)
      real(r8), pointer :: t_veg240_patch          (:)   ! patch 240hr average vegetation temperature (Kelvin)
+     real(r8), pointer :: cisun10_patch           (:)   ! patch 240hr average sun ci ! QZ
+     real(r8), pointer :: cisha10_patch           (:)   ! patch 240hr average sha ci ! QZ
+     real(r8), pointer :: qabs10_patch            (:)   ! patch 240hr average absorb PAR ! QZ
      real(r8), pointer :: gdd0_patch              (:)   ! patch growing degree-days base  0C from planting  (ddays)
      real(r8), pointer :: gdd8_patch              (:)   ! patch growing degree-days base  8C from planting  (ddays)
      real(r8), pointer :: gdd10_patch             (:)   ! patch growing degree-days base 10C from planting  (ddays)
@@ -170,6 +176,9 @@ contains
 
     ! Temperatures
     allocate(this%t_veg_patch              (begp:endp))                      ; this%t_veg_patch              (:)   = nan
+    allocate(this%cisun_patch              (begp:endp))                      ; this%cisun_patch              (:)   = nan
+    allocate(this%cisha_patch              (begp:endp))                      ; this%cisha_patch              (:)   = nan
+    allocate(this%qabs_patch               (begp:endp))                      ; this%qabs_patch               (:)   = nan
     allocate(this%t_h2osfc_col             (begc:endc))                      ; this%t_h2osfc_col             (:)   = nan
     allocate(this%t_h2osfc_bef_col         (begc:endc))                      ; this%t_h2osfc_bef_col         (:)   = nan
     allocate(this%t_ssbef_col              (begc:endc,-nlevsno+1:nlevgrnd))  ; this%t_ssbef_col              (:,:) = nan
@@ -213,6 +222,9 @@ contains
     ! Accumulated fields
     allocate(this%t_veg24_patch            (begp:endp))                      ; this%t_veg24_patch            (:)   = nan
     allocate(this%t_veg240_patch           (begp:endp))                      ; this%t_veg240_patch           (:)   = nan
+    allocate(this%cisun10_patch            (begp:endp))                      ; this%cisun10_patch            (:)   = 27.0_r8
+    allocate(this%cisha10_patch            (begp:endp))                      ; this%cisha10_patch            (:)   = 27.0_r8
+    allocate(this%qabs10_patch             (begp:endp))                      ; this%qabs10_patch             (:)   = 285.0_r8
     allocate(this%gdd0_patch               (begp:endp))                      ; this%gdd0_patch               (:)   = spval
     allocate(this%gdd8_patch               (begp:endp))                      ; this%gdd8_patch               (:)   = spval
     allocate(this%gdd10_patch              (begp:endp))                      ; this%gdd10_patch              (:)   = spval
@@ -347,6 +359,21 @@ contains
          avgflag='A', long_name='vegetation temperature', &
          ptr_patch=this%t_veg_patch)
 
+    ! QZ
+    this%cisun_patch(begp:endp) = spval
+    call hist_addfld1d (fname='cisun_patch', units='-',  &
+         avgflag='A', long_name='ci sun', &
+         ptr_patch=this%cisun_patch)
+    this%cisha_patch(begp:endp) = spval
+    call hist_addfld1d (fname='cisha_patch', units='-',  &
+         avgflag='A', long_name='ci sha', &
+         ptr_patch=this%cisha_patch)
+
+    this%qabs_patch(begp:endp) = spval
+    call hist_addfld1d (fname='qabs_patch', units='K',  &
+         avgflag='A', long_name='absorb PAR', &
+         ptr_patch=this%qabs_patch)
+
     this%t_grnd_col(begc:endc) = spval
     call hist_addfld1d (fname='TG',  units='K',  &
          avgflag='A', long_name='ground temperature', &
@@ -469,7 +496,22 @@ contains
     this%t_veg240_patch(begp:endp)  = spval
     call hist_addfld1d (fname='TV240', units='K',  &
          avgflag='A', long_name='vegetation temperature (last 240hrs)', &
-         ptr_patch=this%t_veg240_patch, default='inactive')
+         ptr_patch=this%t_veg240_patch, default='active')
+    ! QZ
+    this%cisun10_patch(begp:endp)  = spval
+    call hist_addfld1d (fname='cisun240', units='K',  &
+         avgflag='A', long_name='ci sun (last 240hrs)', &
+         ptr_patch=this%cisun10_patch, default='active')
+
+    this%cisha10_patch(begp:endp)  = spval
+    call hist_addfld1d (fname='cisha240', units='K',  &
+         avgflag='A', long_name='ci sha (last 240hrs)', &
+         ptr_patch=this%cisha10_patch, default='active')
+
+    this%qabs10_patch(begp:endp)  = spval
+    call hist_addfld1d (fname='qabs240', units='K',  &
+         avgflag='A', long_name='absorb PAR (last 240hrs)', &
+         ptr_patch=this%qabs10_patch, default='active')
 
     if (crop_prog) then
        this%gdd0_patch(begp:endp) = spval
@@ -654,6 +696,13 @@ contains
             this%t_veg_patch(p)   = 283._r8
          end if
 
+         ! QZ
+         ! normal day partial pressure of CO2 is 385 µmol/mol x 101.325 kPa =
+         ! 39 Pa; intracellular leaf co2 is about 70% of air co2
+         this%cisun_patch(p) = 39.0_r8 * 0.7_r8
+         this%cisha_patch(p) = 39.0_r8 * 0.7_r8
+         this%qabs_patch(p) = 0.0_r8
+
          if (use_vancouver) then
             this%t_ref2m_patch(p) = 297.56
          else if (use_mexicocity) then
@@ -745,6 +794,20 @@ contains
          dim1name='pft', &
          long_name='vegetation temperature', units='K', &
          interpinic_flag='interp', readvar=readvar, data=this%t_veg_patch)
+
+    ! QZ
+    call restartvar(ncid=ncid, flag=flag, varname='cisun_patch', xtype=ncd_double,  &
+         dim1name='pft', &
+         long_name='ci sun', units='-', &
+         interpinic_flag='interp', readvar=readvar, data=this%cisun_patch)
+    call restartvar(ncid=ncid, flag=flag, varname='cisha_patch', xtype=ncd_double, &
+         dim1name='pft', &
+         long_name='ci sha', units='-', &
+         interpinic_flag='interp', readvar=readvar, data=this%cisha_patch)
+    call restartvar(ncid=ncid, flag=flag, varname='qabs_patch', xtype=ncd_double,  &
+         dim1name='pft', &
+         long_name='absorb PAR', units='-', &
+         interpinic_flag='interp', readvar=readvar, data=this%qabs_patch)
 
     call restartvar(ncid=ncid, flag=flag, varname='TH2OSFC', xtype=ncd_double,  &
          dim1name='column', &
@@ -915,6 +978,22 @@ contains
          desc='240hr average of vegetation temperature',  accum_type='runmean', accum_period=-10,  &
          subgrid_type='pft', numlev=1, init_value=0._r8)
 
+    ! QZ
+    this%cisun10_patch(bounds%begp:bounds%endp) = spval
+    call init_accum_field (name='cisun240', units='-',                                                &
+         desc='240hr average of sun ci',  accum_type='runmean', accum_period=-10,                      &
+         subgrid_type='pft', numlev=1, init_value=27._r8)
+
+    this%cisha10_patch(bounds%begp:bounds%endp) = spval
+    call init_accum_field (name='cisha240', units='-', &
+         desc='240hr average of sha ci',  accum_type='runmean', accum_period=-10, &
+         subgrid_type='pft', numlev=1, init_value=27._r8)
+
+    this%qabs10_patch(bounds%begp:bounds%endp) = spval
+    call init_accum_field (name='qabs240', units='-',                                              &
+         desc='240hr average of absorb PAR',  accum_type='runmean', accum_period=-10,              &
+         subgrid_type='pft', numlev=1, init_value=0._r8)
+
     call init_accum_field(name='TREFAV', units='K', &
          desc='average over an hour of 2-m temperature', accum_type='timeavg', accum_period=nint(3600._r8/dtime), &
          subgrid_type='pft', numlev=1, init_value=0._r8)
@@ -1014,6 +1093,14 @@ contains
     call extract_accum_field ('T_VEG240', rbufslp, nstep)
     this%t_veg240_patch(begp:endp) = rbufslp(begp:endp)
 
+    ! QZ
+    call extract_accum_field ('cisun240', rbufslp, nstep)
+    this%cisun10_patch(begp:endp) = rbufslp(begp:endp)
+    call extract_accum_field ('cisha240', rbufslp, nstep)
+    this%cisha10_patch(begp:endp) = rbufslp(begp:endp)
+    call extract_accum_field ('qabs240', rbufslp, nstep)
+    this%qabs10_patch(begp:endp) = rbufslp(begp:endp)
+
     call extract_accum_field ('T10', rbufslp, nstep)
     this%t_a10_patch(begp:endp) = rbufslp(begp:endp)
 
@@ -1112,6 +1199,23 @@ contains
     call extract_accum_field ('T_VEG24' , this%t_veg24_patch  , nstep)
     call update_accum_field  ('T_VEG240', rbufslp             , nstep)
     call extract_accum_field ('T_VEG240', this%t_veg240_patch , nstep)
+
+    ! QZ
+    do p = begp,endp
+       rbufslp(p) = this%cisun_patch(p)
+    end do
+    call update_accum_field  ('cisun240', rbufslp             , nstep)
+    call extract_accum_field ('cisun240', this%cisun10_patch , nstep)
+    do p = begp,endp
+       rbufslp(p) = this%cisha_patch(p)
+    end do
+    call update_accum_field  ('cisha240', rbufslp             , nstep)
+    call extract_accum_field ('cisha240', this%cisha10_patch , nstep)
+    do p = begp,endp
+       rbufslp(p) = this%qabs_patch(p)
+    end do
+    call update_accum_field  ('qabs240', rbufslp             , nstep)
+    call extract_accum_field ('qabs240', this%qabs10_patch , nstep)
 
     ! Accumulate and extract TREFAV - hourly average 2m air temperature
     ! Used to compute maximum and minimum of hourly averaged 2m reference
