@@ -1332,6 +1332,7 @@ contains
     real(r8) :: highlatfact                            ! multiple of qflxlagd for high latitudes
     integer  :: dummyfilter(1)                         ! empty filter
     character(len=32) :: subname='ch4'                 ! subroutine name
+    real(r8) :: finundated_pre_snow(bounds%begc:bounds%endc) ! fraction of inundation when there is now snow ! QZ
     !-----------------------------------------------------------------------
 
     associate(                                                                 & 
@@ -1393,6 +1394,7 @@ contains
          ch4co2f              =>   ch4_vars%ch4co2f_grc                      , & ! Output: [real(r8) (:)   ]  gridcell CO2 production from CH4 oxidation (g C/m**2/s)
          ch4prodg             =>   ch4_vars%ch4prodg_grc                     , & ! Output: [real(r8) (:)   ]  gridcell average CH4 production (g C/m^2/s)       
          ch4_surf_flux_tot    =>   ch4_vars%ch4_surf_flux_tot_col            , & ! Output: [real(r8) (:)   ]  col CH4 flux to atm. (kg C/m**2/s)          
+         snow_depth    =>    waterstate_vars%snow_depth_col  , & ! Input: [real(r8) (:)   ]  snow height (m) 
 
          nem_grc              =>   lnd2atm_vars%nem_grc                      , & ! Output: [real(r8) (:)   ]  gridcell average net methane correction to CO2 flux (g C/m^2/s)
 
@@ -1479,7 +1481,14 @@ contains
                finundated(c) = p3(c)*qflx_surf_lag(c)
             end if
          end if
-         finundated(c) = max( min(finundated(c),1._r8), 0._r8)
+         !finundated(c) = max( min(finundated(c),1._r8), 0._r8)
+
+         if (snow_depth(c) <= 0._r8) then ! If snow_depth<=0,use the above method to calculate finundated. ! QZ
+            finundated(c) = max( min(finundated(c),1._r8), 0._r8)
+            finundated_pre_snow(c) = finundated(c)
+         else
+            finundated(c) = finundated_pre_snow(c) !If snow_depth>0, keep finundated from the previous time step of snow season.
+         end if
 
          ! Update lagged finundated for redox calculation
          if (redoxlags > 0._r8) then
@@ -2563,7 +2572,8 @@ contains
                   if (usefrootc) then
                      m_tiller = frootc(p) ! This will yield much smaller aere area.
                   else
-                     m_tiller = anpp * nppratio * elai(p)
+                     m_tiller = anpp * nppratio * 4.0_r8 ! QZ
+                     !m_tiller = anpp * nppratio * elai(p)
                   end if
 
                   n_tiller = m_tiller / 0.22_r8
