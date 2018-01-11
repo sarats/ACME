@@ -72,7 +72,7 @@
       <!-- CMIP6 DECK compsets and related BGC compsets -->
       <value compset="1850_CAM5%CMIP6_CLM">1850_CMIP6_control</value>
       <value compset="1850_CAM5%CMIP6_CLM45%[^_]*BGC">1850_CMIP6bgc_control</value>
-      <value compset="20TR.*_CLM45%[^_]*BGC">1850-2100_rcp8.5_bgc_transient.xml</value>
+      <value compset="20TR.*_CLM45%[^_]*BGC">20thC_transient_bgc</value>
     </values>
     <group>run_component_clm</group>
     <file>env_run.xml</file>
