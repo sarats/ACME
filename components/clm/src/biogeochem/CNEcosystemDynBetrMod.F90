@@ -93,7 +93,7 @@ module CNEcosystemDynBetrMod
     use CNNDynamicsMod            , only : CNNFixation_balance
     use PStateUpdate1Mod          , only : PStateUpdate1
     use PStateUpdate2Mod          , only : PStateUpdate2, PStateUpdate2h
-    use PDynamicsMod              , only : PBiochemMin_balance,PDeposition,PWeathering
+    use PDynamicsMod              , only : PDeposition,PWeathering,PBiochemMin_Ptaseact
     use CNVerticalProfileMod      , only : decomp_vertprofiles
     use CNRootDynMod              , only : CNRootDyn
     implicit none
@@ -229,7 +229,7 @@ module CNEcosystemDynBetrMod
 
        ! nu_com_phosphatase is true
        call t_startf('PBiochemMin')
-       call PBiochemMin_balance(bounds,num_soilc, filter_soilc, &
+       call PBiochemMin_Ptaseact(bounds,num_soilc, filter_soilc, &
                   cnstate_vars,nitrogenstate_vars,phosphorusstate_vars,phosphorusflux_vars)
        call t_stopf('PBiochemMin')
 
