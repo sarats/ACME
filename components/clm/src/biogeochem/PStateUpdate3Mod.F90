@@ -19,7 +19,7 @@ module PStateUpdate3Mod
   use soilorder_varcon    , only : smax,ks_sorption
   use tracer_varcon       , only : is_active_betr_bgc
   ! bgc interface & pflotran:
-  use clm_varctl          , only : use_pflotran, pf_cmode
+  use clm_varctl          , only : use_pflotran, pf_cmode, spinup_state
   use clm_varctl          , only : nu_com
   use VegetationPropertiesType      , only : veg_vp 
   !
@@ -92,7 +92,7 @@ contains
         do j = 1, nlevdecomp
           do fc = 1,num_soilc
             c = filter_soilc(fc)
-            ps%primp_vr_col(c,j)   = ps%primp_vr_col(c,j) - pf%primp_to_labilep_vr_col(c,j) *dt + pf%pdep_to_sminp_col(c)*dt * pdep_prof(c,j)
+            ps%primp_vr_col(c,j)   = ps%primp_vr_col(c,j) + (1._r8-spinup_state)*(-pf%primp_to_labilep_vr_col(c,j) *dt + pf%pdep_to_sminp_col(c)*dt * pdep_prof(c,j))
           end do
         enddo
       else
