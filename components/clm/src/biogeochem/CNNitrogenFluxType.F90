@@ -197,6 +197,8 @@ module CNNitrogenFluxType
 
      ! deposition fluxes
      real(r8), pointer :: ndep_to_sminn_col                         (:)     ! col atmospheric N deposition to soil mineral N (gN/m2/s)
+     real(r8), pointer :: ndep_to_smin_nh3_col                      (:)     ! col atmospheric N deposition to soil mineral N (gN/m2/s)
+     real(r8), pointer :: ndep_to_smin_no3_col                      (:)     ! col atmospheric N deposition to soil mineral N (gN/m2/s)
      real(r8), pointer :: nfix_to_sminn_col                         (:)     ! col symbiotic/asymbiotic N fixation to soil mineral N (gN/m2/s) 
      real(r8), pointer :: fert_to_sminn_col                         (:)     ! col fertilizer N to soil mineral N (gN/m2/s)
      real(r8), pointer :: soyfixn_to_sminn_col                      (:)     ! col soybean fixation to soil mineral N (gN/m2/s)
@@ -585,6 +587,8 @@ contains
     allocate(this%supplement_to_sminn_surf_patch    (begp:endp)) ; this%supplement_to_sminn_surf_patch    (:) = nan
 
     allocate(this%ndep_to_sminn_col             (begc:endc))    ; this%ndep_to_sminn_col	     (:) = nan
+    allocate(this%ndep_to_smin_nh3_col          (begc:endc))    ; this%ndep_to_smin_nh3_col	     (:) = nan
+    allocate(this%ndep_to_smin_no3_col          (begc:endc))    ; this%ndep_to_smin_no3_col	     (:) = nan
     allocate(this%nfix_to_sminn_col             (begc:endc))    ; this%nfix_to_sminn_col	     (:) = nan
     allocate(this%fert_to_sminn_col             (begc:endc))    ; this%fert_to_sminn_col	     (:) = nan
     allocate(this%soyfixn_to_sminn_col          (begc:endc))    ; this%soyfixn_to_sminn_col          (:) = nan
@@ -2552,6 +2556,8 @@ contains
        i = filter_column(fi)
 
        this%ndep_to_sminn_col(i)             = value_column
+       this%ndep_to_smin_nh3_col(i)          = value_column
+       this%ndep_to_smin_no3_col(i)          = value_column
        this%nfix_to_sminn_col(i)             = value_column
        this%fert_to_sminn_col(i)             = value_column
        this%soyfixn_to_sminn_col(i)          = value_column
