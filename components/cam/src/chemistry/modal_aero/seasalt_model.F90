@@ -816,12 +816,9 @@ add_om_species: if ( has_mam_mom ) then
     end do section_loop
 
    ! Must exceed threshold value small_oceanorg
-   where (mass_frac_bub(:, :) .lt. small_oceanorg)
-      mass_frac_bub(:, :) = 0.0_r8
+   where (om_ssa(:, :) .lt. small_oceanorg)
+      om_ssa(:, :) = 0.0_r8
    end where
-
-   mass_frac_bub_tot(:) = sum(mass_frac_bub, dim=2)
-
 
 ! Divide mass amonst organic tracers
 ! For now, put 75% in polys, 20% in lipids, and 5% in proteins
