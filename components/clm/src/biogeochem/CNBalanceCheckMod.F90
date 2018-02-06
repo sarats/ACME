@@ -19,6 +19,9 @@ module CNBalanceCheckMod
   use CNNitrogenStateType , only : nitrogenstate_type
   use ColumnType          , only : col_pp                
   use GridcellType        , only : grc_pp
+  use clm_varpar          , only : nlevdecomp
+  use clm_varcon          , only : dzsoi_decomp
+  use clm_varctl          , only : nu_com
 
   use CNDecompCascadeConType , only : decomp_cascade_con
   use clm_varpar          , only: ndecomp_cascade_transitions
@@ -493,7 +496,8 @@ contains
          frootp_to_litter      =>  phosphorusflux_vars%frootp_to_litter_patch  , & ! Input:  [real(r8) (:)]  soil mineral P pool loss to leaching (gP/m2/s)
          sminp_to_plant        =>  phosphorusflux_vars%sminp_to_plant_col      , &
          cascade_receiver_pool =>  decomp_cascade_con%cascade_receiver_pool    , &
-         pf                    =>  phosphorusflux_vars                           &
+         pf                    =>  phosphorusflux_vars                         , &
+         ps                    =>  phosphorusstate_vars                          &
          )
 
       ! set time steps
@@ -523,14 +527,14 @@ contains
                do fc = 1,num_soilc
                   c = filter_soilc(fc)
                   flux_mineralization_col(c) = flux_mineralization_col(c) - &
-                                               pf%decomp_cascade_sminp_flux_col(c,k)*dt
+                                               pf%decomp_cascade_sminp_flux_col(c,k)
                end do
          else
                ! column loop
                do fc = 1,num_soilc
                   c = filter_soilc(fc)
                     flux_mineralization_col(c) = flux_mineralization_col(c) + &
-                                               pf%decomp_cascade_sminp_flux_col(c,k)*dt
+                                               pf%decomp_cascade_sminp_flux_col(c,k)
 
                end do
          endif
@@ -571,7 +575,18 @@ contains
              end if
          end if
 
-         col_poutputs(c) = secondp_to_occlp(c) + sminp_leached(c) + col_fire_ploss(c) + dwt_ploss(c) + product_ploss(c)
+         if ((nu_com .ne. 'RD') .and. ps%RG_spinup) then
+            col_poutputs(c) = secondp_to_occlp(c) + sminp_leached(c) + col_fire_ploss(c) + dwt_ploss(c) + product_ploss(c)
+            do j = 1, nlevdecomp
+               col_poutputs(c) = col_poutputs(c) + &
+                  (ps%solutionp_vr_col_cur(c,j) -  ps%solutionp_vr_col_prev(c,j)  + &
+                  ps%labilep_vr_col_cur(c,j) -  ps%labilep_vr_col_prev(c,j) + &
+                  ps%secondp_vr_col_cur(c,j) - ps%secondp_vr_col_prev(c,j) ) * dzsoi_decomp(j)/dt
+            end do
+         else
+            col_poutputs(c) = secondp_to_occlp(c) + sminp_leached(c) + col_fire_ploss(c) + dwt_ploss(c) + product_ploss(c)
+         end if
+
 !         col_poutputs(c) = leafp_to_litter_col(c)+frootp_to_litter_col(c)
 !         col_poutputs(c) =  flux_mineralization_col(c)/dt
 !          col_poutputs(c) = sminp_to_plant(c)
