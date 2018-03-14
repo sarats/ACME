@@ -100,6 +100,8 @@ module CNCarbonStateType
      real(r8), pointer :: totcolc_col              (:)     ! col (gC/m2) total column carbon, incl veg and cpool
      real(r8), pointer :: totabgc_col              (:)     ! col (gC/m2) total column above ground carbon, excluding som 
      real(r8), pointer :: totblgc_col              (:)     ! col (gc/m2) total column non veg carbon
+     real(r8), pointer :: begabgc_col              (:)
+     real(r8), pointer :: begblgc_col              (:)
 
      ! Balance checks
      real(r8), pointer :: begcb_patch              (:)     ! patch carbon mass, beginning of time step (gC/m**2)
@@ -236,6 +238,8 @@ contains
 
     allocate(this%totabgc_col              (begc :endc))                   ;     this%totabgc_col              (:)   = nan
     allocate(this%totblgc_col              (begc:endc))                    ;     this%totblgc_col              (:)   = nan
+    allocate(this%begabgc_col              (begc:endc))                    ;     this%begabgc_col              (:)   = nan
+    allocate(this%begblgc_col              (begc:endc))                    ;     this%begblgc_col              (:)   = nan
     allocate(this%decomp_cpools_vr_col(begc:endc,1:nlevdecomp_full,1:ndecomp_pools))  
     this%decomp_cpools_vr_col(:,:,:)= nan
 
