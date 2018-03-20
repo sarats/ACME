@@ -685,7 +685,7 @@ contains
                           N2_aq/ (N2_aq + km_nfix(veg_pp%itype(p))) * veg_pp%wtcol(p)
                   else
                      g = veg_pp%gridcell(p)
-                     nfix_to_sminn(c) = nfix_to_sminn(c) + vmax_nfix_grid(g, veg_pp%itype(p)) * frootc(p) * cn_scalar(p) *f_nodule * t_scalar(c,1) * &
+                     nfix_to_sminn(c) = nfix_to_sminn(c) + vmax_nfix_grid(g) * frootc(p) * cn_scalar(p) *f_nodule * t_scalar(c,1) * &
                           N2_aq/ (N2_aq + km_nfix(veg_pp%itype(p))) * veg_pp%wtcol(p)
                   endif
               end if

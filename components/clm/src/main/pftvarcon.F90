@@ -252,14 +252,14 @@ module pftvarcon
   real(r8)              :: rsub_top_globalmax
 
   ! spatially heterogeneous parameter
-  real(r8), pointer     :: vcmax_np1_grid(:,:)         ! vcmax~np relationship coefficient
-  real(r8), pointer     :: vcmax_np2_grid(:,:)         ! vcmax~np relationship coefficient
-  real(r8), pointer     :: vcmax_np3_grid(:,:)         ! vcmax~np relationship coefficient
-  real(r8), pointer     :: vmax_plant_p_grid(:,:)      ! VMAX for plant P uptake
-  real(r8), pointer     :: vmax_plant_nh4_grid(:,:)    ! VMAX for plant NH4 uptake
-  real(r8), pointer     :: vmax_nfix_grid(:,:)         ! VMAX of symbiotic N2 fixation
-  real(r8), pointer     :: vmax_ptase_grid(:,:)        ! VMAX of biochemical P production
-  real(r8), pointer     :: km_plant_p_grid(:,:)        ! KM for plant P uptake
+  real(r8), pointer     :: vcmax_np1_grid(:)         ! vcmax~np relationship coefficient
+  real(r8), pointer     :: vcmax_np2_grid(:)         ! vcmax~np relationship coefficient
+  real(r8), pointer     :: vcmax_np3_grid(:)         ! vcmax~np relationship coefficient
+  real(r8), pointer     :: vmax_plant_p_grid(:)      ! VMAX for plant P uptake
+  real(r8), pointer     :: vmax_plant_nh4_grid(:)    ! VMAX for plant NH4 uptake
+  real(r8), pointer     :: vmax_nfix_grid(:)         ! VMAX of symbiotic N2 fixation
+  real(r8), pointer     :: vmax_ptase_grid(:)        ! VMAX of biochemical P production
+  real(r8), pointer     :: km_plant_p_grid(:)        ! KM for plant P uptake
 
   logical               :: vcmax_np1_grid_present      ! flag for vcmax_np1_grid
   logical               :: vcmax_np2_grid_present      ! flag for vcmax_np2_grid
@@ -923,7 +923,7 @@ contains
     ! 1) vcmax_np1
     call ncd_inqvid(ncid,'vcmax_np1', varid, var_desc, readv)
     if (readv) then
-       allocate(vcmax_np1_grid(begg:endg, 0:numveg))
+       allocate(vcmax_np1_grid(begg:endg))
 
        call ncd_io(ncid=ncid, varname='vcmax_np1', flag='read', data=vcmax_np1_grid, dim1name=grlnd, readvar=readv)
        if (.not. readv) then
@@ -939,7 +939,7 @@ contains
     ! 2) vcmax_np2
     call ncd_inqvid(ncid,'vcmax_np2', varid, var_desc, readv)
     if (readv) then
-       allocate(vcmax_np2_grid(begg:endg, 0:numveg))
+       allocate(vcmax_np2_grid(begg:endg))
 
        call ncd_io(ncid=ncid, varname='vcmax_np2', flag='read', data=vcmax_np2_grid, dim1name=grlnd, readvar=readv)
        if (.not. readv) then
@@ -955,7 +955,7 @@ contains
     ! 3) vcmax_np3
     call ncd_inqvid(ncid,'vcmax_np3', varid, var_desc, readv)
     if (readv) then
-       allocate(vcmax_np3_grid(begg:endg, 0:numveg))
+       allocate(vcmax_np3_grid(begg:endg))
 
        call ncd_io(ncid=ncid, varname='vcmax_np3', flag='read', data=vcmax_np3_grid, dim1name=grlnd, readvar=readv)
        if (.not. readv) then
@@ -971,7 +971,7 @@ contains
     ! 4) VMAX_PLANT_P
     call ncd_inqvid(ncid,'VMAX_PLANT_P', varid, var_desc, readv)
     if (readv) then
-       allocate(vmax_plant_p_grid(begg:endg, 0:numveg))
+       allocate(vmax_plant_p_grid(begg:endg))
 
        call ncd_io(ncid=ncid, varname='VMAX_PLANT_P', flag='read', data=vmax_plant_p_grid, dim1name=grlnd, readvar=readv)
        if (.not. readv) then
@@ -987,7 +987,7 @@ contains
     ! 5) VMAX_PLANT_NH4
     call ncd_inqvid(ncid,'VMAX_PLANT_NH4', varid, var_desc, readv)
     if (readv) then
-       allocate(vmax_plant_nh4_grid(begg:endg, 0:numveg))
+       allocate(vmax_plant_nh4_grid(begg:endg))
 
        call ncd_io(ncid=ncid, varname='VMAX_PLANT_NH4', flag='read', data=vmax_plant_nh4_grid, dim1name=grlnd, readvar=readv)
        if (.not. readv) then
@@ -1003,7 +1003,7 @@ contains
     ! 6) VMAX_NFIX
     call ncd_inqvid(ncid,'VMAX_NFIX', varid, var_desc, readv)
     if (readv) then
-       allocate(vmax_nfix_grid(begg:endg, 0:numveg))
+       allocate(vmax_nfix_grid(begg:endg))
 
        call ncd_io(ncid=ncid, varname='VMAX_NFIX', flag='read', data=vmax_nfix_grid, dim1name=grlnd, readvar=readv)
        if (.not. readv) then
@@ -1019,7 +1019,7 @@ contains
     ! 7) VMAX_PTASE
     call ncd_inqvid(ncid,'VMAX_PTASE', varid, var_desc, readv)
     if (readv) then
-       allocate(vmax_ptase_grid(begg:endg, 0:numveg))
+       allocate(vmax_ptase_grid(begg:endg))
 
        call ncd_io(ncid=ncid, varname='VMAX_PTASE', flag='read', data=vmax_ptase_grid, dim1name=grlnd, readvar=readv)
        if (.not. readv) then
@@ -1035,7 +1035,7 @@ contains
     ! 8) KM_PLANT_P
     call ncd_inqvid(ncid,'KM_PLANT_P', varid, var_desc, readv)
     if (readv) then
-       allocate(km_plant_p_grid(begg:endg, 0:numveg))
+       allocate(km_plant_p_grid(begg:endg))
 
        call ncd_io(ncid=ncid, varname='KM_PLANT_P', flag='read', data=km_plant_p_grid, dim1name=grlnd, readvar=readv)
        if (.not. readv) then

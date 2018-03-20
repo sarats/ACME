@@ -656,7 +656,7 @@ contains
                     else
                        g = col_pp%gridcell(c)
                        biochem_pmin_vr(c,j) = biochem_pmin_vr(c,j) + &
-                            vmax_ptase_grid(g,veg_pp%itype(p)) * froot_prof(p,j) * max(lamda_up - lamda_ptase, 0.0_r8) / &
+                            vmax_ptase_grid(g) * froot_prof(p,j) * max(lamda_up - lamda_ptase, 0.0_r8) / &
                             (km_ptase + max(lamda_up - lamda_ptase, 0.0_r8)) * veg_pp%wtcol(p)
                     endif
                 end if

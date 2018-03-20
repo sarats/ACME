@@ -1002,7 +1002,7 @@ contains
                if (.not.CNParamsShareInst%decomp_depth_efolding_grid_present) then
                   depth_scalar(c,j) = exp(-zsoi(j)/decomp_depth_efolding)
                else
-                  g = col_pp%gridcell(g)
+                  g = col_pp%gridcell(c)
                   depth_scalar(c,j) = exp(-zsoi(j)/CNParamsShareInst%decomp_depth_efolding_grid(g))
                end if
             end do

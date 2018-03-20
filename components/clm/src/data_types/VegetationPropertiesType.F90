@@ -136,11 +136,11 @@ module VegetationPropertiesType
      real(r8), allocatable :: br_xr(:)            !Base rate for excess respiration
      real(r8)              :: tc_stress           !Critial temperature for moisture stress
 
-     real(r8), pointer     :: vmax_plant_p_grid(:,:)        ! vmax for plant p uptake
-     real(r8), pointer     :: vmax_plant_nh4_grid(:,:)      ! vmax for plant nh4 uptake
-     real(r8), pointer     :: vmax_nfix_grid(:,:)           ! vmax of symbiotic n2 fixation
-     real(r8), pointer     :: vmax_ptase_grid(:,:)          ! vmax of biochemical p production
-     real(r8), pointer     :: km_plant_p_grid(:,:)          ! km for plant p uptake
+     real(r8), pointer     :: vmax_plant_p_grid(:)        ! vmax for plant p uptake
+     real(r8), pointer     :: vmax_plant_nh4_grid(:)      ! vmax for plant nh4 uptake
+     real(r8), pointer     :: vmax_nfix_grid(:)           ! vmax of symbiotic n2 fixation
+     real(r8), pointer     :: vmax_ptase_grid(:)          ! vmax of biochemical p production
+     real(r8), pointer     :: km_plant_p_grid(:)          ! km for plant p uptake
 
      logical               :: vmax_plant_p_grid_present     ! flag for vmax_plant_p_grid
      logical               :: vmax_plant_nh4_grid_present   ! flag for vmax_plant_nh4_grid
@@ -300,31 +300,31 @@ contains
     this%km_plant_p_grid_present     = km_plant_p_grid_present
 
     if (vmax_plant_p_grid_present) then
-       allocate(this%vmax_plant_p_grid(begg:endg, 0:numpft))
+       allocate(this%vmax_plant_p_grid(begg:endg))
     else
        nullify(this%vmax_plant_p_grid)
     endif
 
     if (vmax_plant_nh4_grid_present) then
-       allocate(this%vmax_plant_nh4_grid(begg:endg, 0:numpft))
+       allocate(this%vmax_plant_nh4_grid(begg:endg))
     else
        nullify(this%vmax_plant_nh4_grid)
     endif
 
     if (vmax_nfix_grid_present) then
-       allocate(this%vmax_nfix_grid(begg:endg, 0:numpft))
+       allocate(this%vmax_nfix_grid(begg:endg))
     else
        nullify(this%vmax_nfix_grid)
     endif
 
     if (km_plant_p_grid_present) then
-       allocate(this%km_plant_p_grid(begg:endg, 0:numpft))
+       allocate(this%km_plant_p_grid(begg:endg))
     else
        nullify(this%km_plant_p_grid)
     endif
 
     if (vmax_ptase_grid_present) then
-       allocate(this%vmax_ptase_grid(begg:endg, 1:numpft))
+       allocate(this%vmax_ptase_grid(begg:endg))
     else
        nullify(this%vmax_ptase_grid)
     endif
@@ -430,23 +430,23 @@ contains
         this%vmax_ptase(m)     = vmax_ptase(m)
 
         if (this%vmax_ptase_grid_present) then
-           this%vmax_ptase_grid(:,m) = vmax_ptase_grid(:,m)
+           this%vmax_ptase_grid(:) = vmax_ptase_grid(:)
         end if
 
         if (this%vmax_plant_p_grid_present) then
-           this%vmax_plant_p_grid(:,m) = vmax_plant_p_grid(:,m)
+           this%vmax_plant_p_grid(:) = vmax_plant_p_grid(:)
         end if
 
         if (this%vmax_plant_nh4_grid_present) then
-           this%vmax_plant_nh4_grid(:,m) = vmax_plant_nh4_grid(:,m)
+           this%vmax_plant_nh4_grid(:) = vmax_plant_nh4_grid(:)
         end if
 
         if (this%vmax_nfix_grid_present) then
-           this%vmax_nfix_grid(:,m) = vmax_nfix_grid(:,m)
+           this%vmax_nfix_grid(:) = vmax_nfix_grid(:)
         end if
 
         if (this%km_plant_p_grid_present) then
-           this%km_plant_p_grid(:,m) = km_plant_p_grid(:,m)
+           this%km_plant_p_grid(:) = km_plant_p_grid(:)
         end if
 
         do j = 1 , nlevdecomp

@@ -516,21 +516,21 @@ contains
 
                      if (vcmax_np1_grid_present) then
                         g               = veg_pp%gridcell(p)
-                        vcmax_np1_local = vcmax_np1_grid(g, veg_pp%itype(p))
+                        vcmax_np1_local = vcmax_np1_grid(g)
                      else
                         vcmax_np1_local = vcmax_np1(veg_pp%itype(p))
                      endif
 
                      if (vcmax_np2_grid_present) then
                         g               = veg_pp%gridcell(p)
-                        vcmax_np2_local = vcmax_np2_grid(g, veg_pp%itype(p))
+                        vcmax_np2_local = vcmax_np2_grid(g)
                      else
                         vcmax_np2_local = vcmax_np2(veg_pp%itype(p))
                      endif
 
                      if (vcmax_np3_grid_present) then
                         g               = veg_pp%gridcell(p)
-                        vcmax_np3_local = vcmax_np3_grid(g, veg_pp%itype(p))
+                        vcmax_np3_local = vcmax_np3_grid(g)
                      else
                         vcmax_np3_local = vcmax_np3(veg_pp%itype(p))
                      endif
