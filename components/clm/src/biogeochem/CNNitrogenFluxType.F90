@@ -44,7 +44,8 @@ module CNNitrogenFluxType
      real(r8), pointer :: m_deadcrootn_to_litter_patch              (:)     ! patch dead coarse root N mortality (gN/m2/s)
      real(r8), pointer :: m_retransn_to_litter_patch                (:)     ! patch retranslocated N pool mortality (gN/m2/s)
      real(r8), pointer :: m_npool_to_litter_patch                   (:)     ! patch npool mortality (gN/m2/s)
-     real(r8), pointer :: supplement_to_sminn_surf_patch            (:)     ! patch supplmenental N (gN / m2/s)
+     real(r8), pointer :: supplement_to_sminn_surf_patch            (:)     ! patch supplemenental N directly goes to plant (gN / m2/s)
+     real(r8), pointer :: supplement_to_sminn_surf_col              (:)     ! col supplemental N directly goes to plant
 
      ! harvest fluxes
      real(r8), pointer :: hrv_leafn_to_litter_patch                 (:)     ! patch leaf N harvest mortality (gN/m2/s)
@@ -200,6 +201,8 @@ module CNNitrogenFluxType
      real(r8), pointer :: ndep_to_smin_nh3_col                      (:)     ! col atmospheric N deposition to soil mineral N (gN/m2/s)
      real(r8), pointer :: ndep_to_smin_no3_col                      (:)     ! col atmospheric N deposition to soil mineral N (gN/m2/s)
      real(r8), pointer :: nfix_to_sminn_col                         (:)     ! col symbiotic/asymbiotic N fixation to soil mineral N (gN/m2/s) 
+     real(r8), pointer :: nfix_to_plantn_patch                      (:)     ! nitrogen fixation goes to plant
+     real(r8), pointer :: nfix_to_ecosysn_col                       (:)     ! total nitrogen fixation
      real(r8), pointer :: fert_to_sminn_col                         (:)     ! col fertilizer N to soil mineral N (gN/m2/s)
      real(r8), pointer :: soyfixn_to_sminn_col                      (:)     ! col soybean fixation to soil mineral N (gN/m2/s)
       
@@ -585,11 +588,14 @@ contains
     allocate(this%fert_counter_patch                (begp:endp)) ; this%fert_counter_patch                (:) = nan
     allocate(this%soyfixn_patch                     (begp:endp)) ; this%soyfixn_patch                     (:) = nan
     allocate(this%supplement_to_sminn_surf_patch    (begp:endp)) ; this%supplement_to_sminn_surf_patch    (:) = nan
+    allocate(this%nfix_to_plantn_patch              (begp:endp)) ; this%nfix_to_plantn_patch              (:) = nan
 
+    allocate(this%supplement_to_sminn_surf_col  (begc:endc))    ; this%supplement_to_sminn_surf_col  (:) = nan
     allocate(this%ndep_to_sminn_col             (begc:endc))    ; this%ndep_to_sminn_col	     (:) = nan
     allocate(this%ndep_to_smin_nh3_col          (begc:endc))    ; this%ndep_to_smin_nh3_col	     (:) = nan
     allocate(this%ndep_to_smin_no3_col          (begc:endc))    ; this%ndep_to_smin_no3_col	     (:) = nan
     allocate(this%nfix_to_sminn_col             (begc:endc))    ; this%nfix_to_sminn_col	     (:) = nan
+    allocate(this%nfix_to_ecosysn_col           (begc:endc))    ; this%nfix_to_ecosysn_col           (:) = nan
     allocate(this%fert_to_sminn_col             (begc:endc))    ; this%fert_to_sminn_col	     (:) = nan
     allocate(this%soyfixn_to_sminn_col          (begc:endc))    ; this%soyfixn_to_sminn_col          (:) = nan
     allocate(this%hrv_deadstemn_to_prod10n_col  (begc:endc))    ; this%hrv_deadstemn_to_prod10n_col  (:) = nan
@@ -2452,6 +2458,7 @@ contains
        this%noutputs_patch(i)                            = value_patch
        this%wood_harvestn_patch(i)                       = value_patch
        this%fire_nloss_patch(i)                          = value_patch
+       this%nfix_to_plantn_patch(i)                      = value_patch
     end do
 
     if ( crop_prog )then
@@ -2554,11 +2561,12 @@ contains
 
     do fi = 1,num_column
        i = filter_column(fi)
-
+       this%supplement_to_sminn_surf_col(i)  = value_column
        this%ndep_to_sminn_col(i)             = value_column
        this%ndep_to_smin_nh3_col(i)          = value_column
        this%ndep_to_smin_no3_col(i)          = value_column
        this%nfix_to_sminn_col(i)             = value_column
+       this%nfix_to_ecosysn_col(i)           = value_column
        this%fert_to_sminn_col(i)             = value_column
        this%soyfixn_to_sminn_col(i)          = value_column
        this%hrv_deadstemn_to_prod10n_col(i)  = value_column        
@@ -2777,6 +2785,10 @@ contains
          this%sminn_to_plant_patch(bounds%begp:bounds%endp), &
          this%sminn_to_plant_col(bounds%begc:bounds%endc))
 
+    call p2c(bounds, num_soilc, filter_soilc, &
+         this%supplement_to_sminn_surf_patch(bounds%begp:bounds%endp), &
+         this%supplement_to_sminn_surf_col(bounds%begc:bounds%endc))
+
      ! supplementary N supplement_to_sminn
      do j = 1, nlevdecomp
         do fc = 1,num_soilc
@@ -2947,6 +2959,11 @@ contains
     if(is_active_betr_bgc)then
       call this%Summary_betr(bounds, num_soilc, filter_soilc, num_soilp, filter_soilp)
       return
+    else
+      do fc = 1, num_soilc
+        c = filter_soilc(fc)
+        this%nfix_to_ecosysn_col(c)=this%nfix_to_sminn_col(c)
+      enddo
     endif
 
 

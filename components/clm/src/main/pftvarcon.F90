@@ -209,6 +209,7 @@ module pftvarcon
   real(r8)              :: KM_NIT              ! KM for nitrifier NH4 uptake
   real(r8)              :: KM_DEN              ! KM for denitrifier NO3 uptake
   real(r8), allocatable :: decompmicc_patch_vr(:,:) ! microbial decomposer biomass gC/m3
+  real(r8), allocatable :: alpha_nfix(:)       !fraction of fixed N goes directly to plant
   real(r8), allocatable :: VMAX_NFIX(:)        ! VMAX of symbiotic N2 fixation
   real(r8), allocatable :: KM_NFIX(:)          ! KM of symbiotic N2 fixation
   real(r8), allocatable :: VMAX_PTASE(:)    ! VMAX of biochemical P production
@@ -473,6 +474,7 @@ contains
     allocate( VMAX_PTASE(0:mxpft))
     allocate( i_vc               (0:mxpft) ) 
     allocate( s_vc               (0:mxpft) ) 
+    allocate( alpha_nfix         (0:mxpft) )
     allocate( VMAX_NFIX          (0:mxpft) )
     allocate( KM_NFIX            (0:mxpft) )
     ! new stoichiometry
@@ -794,6 +796,9 @@ contains
         if ( .not. readv ) call endrun(msg=' ERROR: error in reading in pft decompmicc_patch_vr'//errMsg(__FILE__, __LINE__))
         call ncd_io('VMAX_NFIX',VMAX_NFIX, 'read', ncid, readvar=readv)  
         if ( .not. readv ) call endrun(msg=' ERROR: error in reading in VMAX_NFIX'//errMsg(__FILE__, __LINE__))
+        call ncd_io('alpha_nfix',alpha_nfix, 'read', ncid, readvar=readv)
+        if ( .not. readv ) alpha_nfix(:)=0._r8
+        
         call ncd_io('KM_NFIX',KM_NFIX, 'read', ncid, readvar=readv)  
         if ( .not. readv ) call endrun(msg=' ERROR: error in reading in KM_NFIX'//errMsg(__FILE__, __LINE__))
         call ncd_io('VMAX_PTASE',VMAX_PTASE, 'read', ncid, readvar=readv)  
