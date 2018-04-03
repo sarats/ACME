@@ -21,6 +21,7 @@ module CNCStateUpdate1BeTRMod
   use VegetationType              , only : veg_pp
   ! bgc interface & pflotran:
   use clm_varctl             , only : use_pflotran, pf_cmode, use_ed
+  use CropType                  , only : crop_type
   !
   implicit none
   save
@@ -78,7 +79,7 @@ contains
   subroutine CStateUpdate1(bounds, &
        num_soilc, filter_soilc, &
        num_soilp, filter_soilp, &
-       cnstate_vars, carbonflux_vars, carbonstate_vars)
+       crop_vars, carbonflux_vars, carbonstate_vars)
     !
     ! !DESCRIPTION:
     ! On the radiation time step, update all the prognostic carbon state
@@ -93,7 +94,7 @@ contains
     integer                , intent(in)    :: filter_soilc(:) ! filter for soil columns
     integer                , intent(in)    :: num_soilp       ! number of soil patches in filter
     integer                , intent(in)    :: filter_soilp(:) ! filter for soil patches
-    type(cnstate_type)     , intent(inout) :: cnstate_vars
+    type(crop_type)        , intent(inout) :: crop_vars
     type(carbonflux_type)  , intent(inout) :: carbonflux_vars
     type(carbonstate_type) , intent(inout) :: carbonstate_vars
     !
@@ -110,8 +111,7 @@ contains
          woody                         =>    veg_vp%woody                                    , & ! Input:  [real(r8) (:)     ]  binary flag for woody lifeform (1=woody, 0=not woody)
          cascade_donor_pool            =>    decomp_cascade_con%cascade_donor_pool               , & ! Input:  [integer  (:)     ]  which pool is C taken from for a given decomposition step
          cascade_receiver_pool         =>    decomp_cascade_con%cascade_receiver_pool            , & ! Input:  [integer  (:)     ]  which pool is C added to for a given decomposition step
-
-         harvdate                      =>    cnstate_vars%harvdate_patch                         , & ! Input:  [integer  (:)     ]  harvest date
+         harvdate                      =>    crop_vars%harvdate_patch                         , &
 
          cf => carbonflux_vars  , &
          cs => carbonstate_vars   &
